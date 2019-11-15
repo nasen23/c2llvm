@@ -57,13 +57,15 @@ pub enum Token {
     Id(String),
 
     Whitespace,
-    Comment
+    Comment,
+
+    Unknown
 }
 
 lexer! {
     fn next_token(tok: 'a) -> Token;
 
-    r#"\s+"# => Token::Whitespace,
+    r#"[ \t\r\n]+"# => Token::Whitespace,
     // C-style comment /* .. */, shouldn't contain "*/"
     r#"/\*(~(.*\*/.*))\*/"# => Token::Comment,
     r#"//[^\n]*"# => Token::Comment,
@@ -121,6 +123,7 @@ lexer! {
     r#"[0-9]+\.[0-9]*"# => Token::DoubleLit(tok.parse::<f64>().unwrap()),
     r#"[a-zA-Z]\w*"# => Token::Id(tok.to_owned()),
 
+    r#"."# => Token::Unknown
 }
 
 
@@ -146,11 +149,33 @@ fn parse_char(tok: &str) -> char {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use Token::*;
 
     #[test]
     fn raw_next_token_comment() {
-        let input: &str = "// comment";
+        let input = "// comment";
         let (token, _) = next_token(input).unwrap();
-        assert_eq!(token, Token::Comment);
+        assert_eq!(token, Comment);
+    }
+
+    #[test]
+    fn raw_next_token_char_init() {
+        let mut input = r"char c = '\n';";
+        let expected_res = vec![
+            Char, Whitespace, Id("c".to_owned()), Whitespace, Assign, Whitespace, CharLit('\n'), Semi
+        ];
+        let mut res = vec![];
+
+        loop {
+            match next_token(input) {
+                Some((token, next)) => {
+                    res.push(token);
+                    input = next;
+                },
+                None => break
+            }
+        }
+
+        assert_eq!(res, expected_res);
     }
 }
