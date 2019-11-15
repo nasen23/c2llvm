@@ -2,7 +2,7 @@ use plex::lexer;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
-    // Missing: switch case, do while, static, const
+    // Missing: switch case, do while, static, const, goto, label
     Void,
     Char,
     Short,
