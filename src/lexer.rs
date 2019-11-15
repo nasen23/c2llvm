@@ -1,8 +1,8 @@
 use plex::lexer;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
-    // Missing: pointer(*), address(&), |, &(bop), ^, <<, >>
+    // Missing: switch case, do while, static, const
     Void,
     Char,
     Short,
@@ -37,6 +37,12 @@ pub enum Token {
     Comma,
     Semi,
     Not,
+    BitOr,
+    BitAnd,
+    BitXor,
+    BitLSft,
+    BitRSft,
+    BitRev,
     LPar,
     RPar,
     LBrk,
@@ -45,8 +51,8 @@ pub enum Token {
     RBrc,
 
     StringLit(String),
-    CharLit(i64),
-    IntLit(i64),
+    CharLit(char),
+    IntLit(i32),
     DoubleLit(f64),
     Id(String),
 
@@ -55,7 +61,7 @@ pub enum Token {
 }
 
 lexer! {
-    fn next_token(text: 'a) -> Token;
+    fn next_token(tok: 'a) -> Token;
 
     r#"\s+"# => Token::Whitespace,
     // C-style comment /* .. */, shouldn't contain "*/"
@@ -82,9 +88,9 @@ lexer! {
     r#">="# => Token::Ge,
     r#"=="# => Token::Eq,
     r#"!="# => Token::Ne,
-    r#"&&"# => Token::And,
+    r#"\&\&"# => Token::And,
     r#"\|\|"# => Token::Or,
-    r#"+"# => Token::Add,
+    r#"\+"# => Token::Add,
     r#"-"# => Token::Sub,
     r#"\*"# => Token::Mul,
     r#"/"# => Token::Div,
@@ -96,6 +102,12 @@ lexer! {
     r#","# => Token::Comma,
     r#";"# => Token::Semi,
     r#"!"# => Token::Not,
+    r#"\|"# => Token::BitOr,
+    r#"\&"# => Token::BitAnd,
+    r#"^"# => Token::BitXor,
+    r#"<<"# => Token::BitLSft,
+    r#">>"# => Token::BitRSft,
+    r#"\~"# => Token::BitRev,
     r#"\("# => Token::LPar,
     r#"\)"# => Token::RPar,
     r#"\["# => Token::LBrk,
@@ -103,10 +115,42 @@ lexer! {
     r#"\{"# => Token::LBrc,
     r#"\}"# => Token::RBrc,
 
-    r#""[^"\\]*(\\.[^"\\]*)*""# => Token::StringLit,
-    r#"'(\\.|[^'])'"# => Token::CharLit,
-    r#"\d+|(0x[0-9a-fA-F]+)"# => Token::IntLit,
-    r#"[0-9]+\.[0-9]*"# => Token::DoubleLit,
-    r#"[a-zA-Z]\w*"# => Token::Id,
+    r#""[^"\\]*(\\.[^"\\]*)*""# => Token::StringLit(tok[1..(tok.len() - 1)].to_owned()),
+    r#"'(\\.|[^'])'"# => Token::CharLit(parse_char(tok)),
+    r#"\d+|(0x[0-9a-fA-F]+)"# => Token::IntLit(tok.parse().unwrap()),
+    r#"[0-9]+\.[0-9]*"# => Token::DoubleLit(tok.parse::<f64>().unwrap()),
+    r#"[a-zA-Z]\w*"# => Token::Id(tok.to_owned()),
 
+}
+
+
+// parse &str into char
+// TODO: This immediately panics on error, consider sending it to upper level to
+// handle error properly
+fn parse_char(tok: &str) -> char {
+    let tok = &tok[1..(tok.len() - 1)];
+
+    match tok {
+        r"\n" => '\n',
+        r"\r" => '\r',
+        r"\t" => '\t',
+        r"\\" => '\\',
+        r"\'" => '\'',
+        r#"\""# => '\'',
+        s if s.len() == 1 => s.chars().next().unwrap(),
+        _ => panic!("Unknown escape character")
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn raw_next_token_comment() {
+        let input: &str = "// comment";
+        let (token, _) = next_token(input).unwrap();
+        assert_eq!(token, Token::Comment);
+    }
 }
