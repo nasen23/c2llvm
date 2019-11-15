@@ -9,7 +9,6 @@ pub enum Token {
     Int,
     Long,
     Unsigned,
-
     While,
     For,
     If,
@@ -56,7 +55,7 @@ pub enum Token {
     DoubleLit(f64),
     Id(String),
 
-    Whitespace,
+    _Eps,
     Comment,
 
     Unknown
@@ -65,7 +64,7 @@ pub enum Token {
 lexer! {
     fn next_token(tok: 'a) -> Token;
 
-    r#"[ \t\r\n]+"# => Token::Whitespace,
+    r#"[ \t\r\n]+"# => Token::_Eps,
     // C-style comment /* .. */, shouldn't contain "*/"
     r#"/\*(~(.*\*/.*))\*/"# => Token::Comment,
     r#"//[^\n]*"# => Token::Comment,
@@ -145,6 +144,34 @@ fn parse_char(tok: &str) -> char {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Lexer<'a> {
+    original: &'a str,
+    remaining: &'a str
+}
+
+impl<'a> Lexer<'a> {
+    pub fn new(input: &'a str) -> Lexer<'a> {
+        Lexer {
+            original: input, remaining: input
+        }
+    }
+}
+
+impl<'a> Iterator for Lexer<'a> {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match next_token(self.remaining) {
+            Some((token, next)) => {
+                self.remaining = next;
+                Some(token)
+            },
+            None => None
+        }
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -162,7 +189,7 @@ mod tests {
     fn raw_next_token_char_init() {
         let mut input = r"char c = '\n';";
         let expected_res = vec![
-            Char, Whitespace, Id("c".to_owned()), Whitespace, Assign, Whitespace, CharLit('\n'), Semi
+            Char, _Eps, Id("c".to_owned()), _Eps, Assign, _Eps, CharLit('\n'), Semi
         ];
         let mut res = vec![];
 
@@ -177,5 +204,16 @@ mod tests {
         }
 
         assert_eq!(res, expected_res);
+    }
+
+    #[test]
+    fn lexer_empty_for() {
+        let lexer = Lexer::new(r"for(;;){}");
+        let res: Vec<Token> = lexer.into_iter().collect();
+        let expected = vec![
+            For, LPar, Semi, Semi, RPar, LBrc, RBrc
+        ];
+
+        assert_eq!(res, expected);
     }
 }
