@@ -1,7 +1,7 @@
 use plex::lexer;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Token {
+pub enum Token<'a> {
     // Missing: switch case, do while, static, const, goto, label
     Void,
     Char,
@@ -12,8 +12,7 @@ pub enum Token {
     While,
     For,
     If,
-    Else,
-    Return,
+    Else, Return,
     Break,
     Continue,
     Extern,
@@ -49,11 +48,11 @@ pub enum Token {
     LBrc,
     RBrc,
 
-    StringLit(String),
+    StringLit(&'a str),
     CharLit(char),
     IntLit(i32),
     DoubleLit(f64),
-    Id(String),
+    Id(&'a str),
 
     _Eps,
     Comment,
@@ -116,11 +115,11 @@ lexer! {
     r#"\{"# => Token::LBrc,
     r#"\}"# => Token::RBrc,
 
-    r#""[^"\\]*(\\.[^"\\]*)*""# => Token::StringLit(tok[1..(tok.len() - 1)].to_owned()),
+    r#""[^"\\]*(\\.[^"\\]*)*""# => Token::StringLit(&tok[1..(tok.len() - 1)]),
     r#"'(\\.|[^'])'"# => Token::CharLit(parse_char(tok)),
     r#"\d+|(0x[0-9a-fA-F]+)"# => Token::IntLit(tok.parse().unwrap()),
     r#"[0-9]+\.[0-9]*"# => Token::DoubleLit(tok.parse::<f64>().unwrap()),
-    r#"[a-zA-Z]\w*"# => Token::Id(tok.to_owned()),
+    r#"[a-zA-Z]\w*"# => Token::Id(tok),
 
     r#"."# => Token::Unknown
 }
@@ -159,7 +158,7 @@ impl<'a> Lexer<'a> {
 }
 
 impl<'a> Iterator for Lexer<'a> {
-    type Item = Token;
+    type Item = Token<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match next_token(self.remaining) {
@@ -189,7 +188,7 @@ mod tests {
     fn raw_next_token_char_init() {
         let mut input = r"char c = '\n';";
         let expected_res = vec![
-            Char, _Eps, Id("c".to_owned()), _Eps, Assign, _Eps, CharLit('\n'), Semi
+            Char, _Eps, Id("c"), _Eps, Assign, _Eps, CharLit('\n'), Semi
         ];
         let mut res = vec![];
 
