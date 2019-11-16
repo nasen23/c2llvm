@@ -2,7 +2,7 @@ use plex::lexer;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token<'a> {
-    // Missing: switch case, do while, static, const, goto, label
+    // Missing: goto, label, typedef, struct, enum, union
     Const,
     Static,
     Void,
@@ -11,6 +11,10 @@ pub enum Token<'a> {
     Int,
     Long,
     Unsigned,
+    Typedef,
+    Struct,
+    Enum,
+    Union,
     Do,
     While,
     For,
@@ -84,6 +88,10 @@ lexer! {
     r#"int"# => Token::Int,
     r#"long"# => Token::Long,
     r#"unsigned"# => Token::Unsigned,
+    r#"typedef"# => Token::Typedef,
+    r#"struct"# => Token::Struct,
+    r#"enum"# => Token::Enum,
+    r#"union"# => Token::Union,
 
     r#"do"# => Token::Do,
     r#"while"# => Token::While,
