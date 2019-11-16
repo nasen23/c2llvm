@@ -36,10 +36,10 @@ impl Ty {
     pub const fn uint() -> Ty { Ty::new(TyKind::UInt) }
     pub const fn float() -> Ty { Ty::new(TyKind::Float) }
     pub const fn double() -> Ty { Ty::new(TyKind::Double) }
-    pub const fn array(kind: TyKind, len: Option<u32>) -> Ty {
+    pub fn array(kind: TyKind, len: Option<u32>) -> Ty {
         Ty::new(TyKind::Array(Array { tyk: Box::new(kind), len }))
     }
-    pub const fn pointer(kind: TyKind) -> Ty {
+    pub fn pointer(kind: TyKind) -> Ty {
         Ty::new(TyKind::Pointer(Pointer { tyk: Box::new(kind) }))
     }
 }
