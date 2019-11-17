@@ -217,8 +217,7 @@ impl<'a> Iterator for Lexer<'a> {
             };
             match tok {
                 Token::_Eps | Token::Comment => {
-                    continue
-                },
+                    continue},
                 tok => {
                     return Some((tok, span))
                 }
@@ -263,14 +262,14 @@ mod tests {
 
     fn test_lexer(input: &str, expected: Vec<Token>) {
         let lexer = Lexer::new(input);
-        let res: Vec<_> = lexer.into_iter().collect();
+        let res: Vec<_> = lexer.into_iter().map(|t| t.0).collect();
         assert_eq!(res, expected);
     }
 
     #[test]
     fn lexer_empty_for() {
         let lexer = Lexer::new(r"for(;;){}");
-        let res: Vec<Token> = lexer.into_iter().collect();
+        let res: Vec<Token> = lexer.into_iter().map(|t| t.0).collect();
         let expected = vec![
             For, LPar, Semi, Semi, RPar, LBrc, RBrc
         ];
@@ -281,7 +280,7 @@ mod tests {
     #[test]
     fn lexer_bitand_expr() {
         let lexer = Lexer::new(r"a=a&b;");
-        let res: Vec<_> = lexer.into_iter().collect();
+        let res: Vec<_> = lexer.into_iter().map(|t| t.0).collect();
         let expected = vec![Id("a"), Assign, Id("a"), BitAnd, Id("b"), Semi];
 
         assert_eq!(res, expected);
