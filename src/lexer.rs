@@ -196,16 +196,33 @@ impl<'a> Lexer<'a> {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct Span {
+    pub lo: usize,
+    pub hi: usize
+}
+
 impl<'a> Iterator for Lexer<'a> {
-    type Item = Token<'a>;
+    type Item = (Token<'a>, Span);
 
     fn next(&mut self) -> Option<Self::Item> {
-        match next_token(self.remaining) {
-            Some((token, next)) => {
+        loop {
+            let (tok, span) = if let Some((tok, next)) = next_token(self.remaining) {
+                let lo = self.original.len() - self.remaining.len();
+                let hi = self.original.len() - next.len();
                 self.remaining = next;
-                Some(token)
-            },
-            None => None
+                (tok, Span { lo, hi })
+            } else {
+                return None;
+            };
+            match tok {
+                Token::_Eps | Token::Comment => {
+                    continue
+                },
+                tok => {
+                    return Some((tok, span))
+                }
+            }
         }
     }
 }
