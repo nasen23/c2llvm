@@ -24,22 +24,23 @@ pub struct Pointer {
 }
 
 pub struct Ty {
+    pub const_: bool,
     pub kind: TyKind
 }
 
 impl Ty {
-    pub const fn new(kind: TyKind) -> Ty { Ty {kind} }
+    pub const fn new(kind: TyKind, const_: bool) -> Ty { Ty { const_, kind } }
 
-    pub const fn void() -> Ty { Ty::new(TyKind::Void) }
-    pub const fn char() -> Ty { Ty::new(TyKind::Char) }
-    pub const fn int() -> Ty { Ty::new(TyKind::Int) }
-    pub const fn uint() -> Ty { Ty::new(TyKind::UInt) }
-    pub const fn float() -> Ty { Ty::new(TyKind::Float) }
-    pub const fn double() -> Ty { Ty::new(TyKind::Double) }
+    pub const fn void() -> Ty { Ty::new(TyKind::Void, false) }
+    pub const fn char() -> Ty { Ty::new(TyKind::Char, false) }
+    pub const fn int() -> Ty { Ty::new(TyKind::Int, false) }
+    pub const fn uint() -> Ty { Ty::new(TyKind::UInt, false) }
+    pub const fn float() -> Ty { Ty::new(TyKind::Float, false) }
+    pub const fn double() -> Ty { Ty::new(TyKind::Double, false) }
     pub fn array(kind: TyKind, len: Option<u32>) -> Ty {
-        Ty::new(TyKind::Array(Array { tyk: Box::new(kind), len }))
+        Ty::new(TyKind::Array(Array { tyk: Box::new(kind), len }), false)
     }
     pub fn pointer(kind: TyKind) -> Ty {
-        Ty::new(TyKind::Pointer(Pointer { tyk: Box::new(kind) }))
+        Ty::new(TyKind::Pointer(Pointer { tyk: Box::new(kind) }), false)
     }
 }
