@@ -146,7 +146,7 @@ lexer! {
     r#"'(\\.|[^'])'"# => Token::CharLit(parse_char(tok)),
     r#"[0-9]+|(0x[0-9a-fA-F]+)"# => Token::IntLit(parse_int(tok)),
     r#"[0-9]+\.[0-9]*"# => Token::DoubleLit(tok.parse::<f64>().unwrap()),
-    r#"[a-zA-Z]\w*"# => Token::Id(tok),
+    r#"[a-zA-Z][a-zA-Z0-9_]*"# => Token::Id(tok),
 
     r#"."# => Token::Unknown
 }
@@ -276,6 +276,11 @@ mod tests {
             Int, Mul, _Eps, Id("a"), Assign, IntLit(12), Semi, Id("c"), Assign, Mul, Id("a"), And, Id("b"), Semi
         ]);
         test_lexer(r"double* a=0.34", vec![Double, Mul, _Eps, Id("a"), Assign, DoubleLit(0.34)]);
+    }
+
+    #[test]
+    fn lexer_weird_ids() {
+        test_lexer(r"int absolute_long=1", vec![Int, _Eps, Id("absolute_long"), Assign, IntLit(1)]);
     }
 
 }
