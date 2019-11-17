@@ -11,7 +11,7 @@ pub struct Program<'a> {
 
 pub struct FuncDef<'a> {
     pub name: &'a str,
-    pub ret: Ty,
+    pub ret: Ty<'a>,
     pub param: Vec<VarDef<'a>>,
     pub block: Option<Block<'a>>,
     pub extern_: bool
@@ -21,13 +21,14 @@ pub struct Block<'a> {
     pub stmts: Vec<Stmt<'a>>
 }
 
-// pub struct TypeDef<'a> {
-
-// }
+pub struct TypeDef<'a> {
+    pub ty: Ty<'a>,
+    pub name: &'a str
+}
 
 pub struct VarDef<'a> {
     name: &'a str,
-    ty: Ty,
+    ty: Ty<'a>,
     // Note that const variables must have an initial value
     // If it is not initialized explicitly, it should have a default value
     value: Option<Expr<'a>>,
