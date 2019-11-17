@@ -11,6 +11,7 @@ pub enum Token<'a> {
     Int,
     Long,
     Unsigned,
+
     Float,
     Double,
     Typedef,
@@ -90,8 +91,8 @@ lexer! {
     r#"int"# => Token::Int,
     r#"long"# => Token::Long,
     r#"unsigned"# => Token::Unsigned,
-    r#"Float"# => Token::Float,
-    r#"Double"# => Token::Double,
+    r#"float"# => Token::Float,
+    r#"double"# => Token::Double,
     r#"typedef"# => Token::Typedef,
     r#"struct"# => Token::Struct,
     r#"enum"# => Token::Enum,
@@ -143,7 +144,7 @@ lexer! {
 
     r#""[^"\\]*(\\.[^"\\]*)*""# => Token::StringLit(&tok[1..(tok.len() - 1)]),
     r#"'(\\.|[^'])'"# => Token::CharLit(parse_char(tok)),
-    r#"\d+|(0x[0-9a-fA-F]+)"# => Token::IntLit(tok.parse().unwrap()),
+    r#"[0-9]+|(0x[0-9a-fA-F]+)"# => Token::IntLit(parse_int(tok)),
     r#"[0-9]+\.[0-9]*"# => Token::DoubleLit(tok.parse::<f64>().unwrap()),
     r#"[a-zA-Z]\w*"# => Token::Id(tok),
 
@@ -166,6 +167,18 @@ fn parse_char(tok: &str) -> char {
         r#"\""# => '\'',
         s if s.len() == 1 => s.chars().next().unwrap(),
         _ => panic!("Unknown escape character")
+    }
+}
+
+// parse &str number("90" or "0xff") into i32
+fn parse_int(tok: &str) -> i32 {
+    if tok.len() < 3 {
+        return tok.parse().unwrap();
+    }
+    match &tok[..2] {
+        // TODO: parse as base of 16 in the first case
+        "0x" => tok.parse().unwrap(),
+        _ => tok.parse().unwrap()
     }
 }
 
@@ -231,6 +244,12 @@ mod tests {
         assert_eq!(res, expected_res);
     }
 
+    fn test_lexer(input: &str, expected: Vec<Token>) {
+        let lexer = Lexer::new(input);
+        let res: Vec<_> = lexer.into_iter().collect();
+        assert_eq!(res, expected);
+    }
+
     #[test]
     fn lexer_empty_for() {
         let lexer = Lexer::new(r"for(;;){}");
@@ -241,4 +260,22 @@ mod tests {
 
         assert_eq!(res, expected);
     }
+
+    #[test]
+    fn lexer_bitand_expr() {
+        let lexer = Lexer::new(r"a=a&b;");
+        let res: Vec<_> = lexer.into_iter().collect();
+        let expected = vec![Id("a"), Assign, Id("a"), BitAnd, Id("b"), Semi];
+
+        assert_eq!(res, expected);
+    }
+
+    #[test]
+    fn lexer_literals() {
+        test_lexer(r"int* a=12;c=*a&&b;", vec![
+            Int, Mul, _Eps, Id("a"), Assign, IntLit(12), Semi, Id("c"), Assign, Mul, Id("a"), And, Id("b"), Semi
+        ]);
+        test_lexer(r"double* a=0.34", vec![Double, Mul, _Eps, Id("a"), Assign, DoubleLit(0.34)]);
+    }
+
 }
