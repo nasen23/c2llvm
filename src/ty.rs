@@ -1,3 +1,5 @@
+// This type system is incomplete, as it may have some custom types like structs,
+// enums, typedefs.
 
 pub enum TyKind {
     // incomplete type 'void' could not be directly used
