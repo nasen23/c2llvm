@@ -4,9 +4,13 @@ use crate::op::*;
 pub struct Program<'a> {
     // Besides function definition and declaration,
     // There are structdef, enumdef, uniondef, vardef, typedef too.
-    pub main: Option<FuncDef<'a>>,
-    pub func: Vec<FuncDef<'a>>,
-    pub global: Vec<VarDef<'a>>
+    pub decl: Vec<Decl<'a>>
+}
+
+pub enum Decl<'a> {
+    TypeDef(TypeDef<'a>),
+    VarDef(VarDef<'a>),
+    FuncDef(FuncDef<'a>)
 }
 
 pub struct FuncDef<'a> {
