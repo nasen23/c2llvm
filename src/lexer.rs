@@ -1,7 +1,7 @@
 use plex::lexer;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Token<'a> {
+pub enum Token {
     // Missing:
     Const,
     Static,
@@ -63,11 +63,11 @@ pub enum Token<'a> {
     LBrc,
     RBrc,
 
-    StringLit(&'a str),
+    StringLit(String),
     CharLit(char),
     IntLit(i32),
     DoubleLit(f64),
-    Id(&'a str),
+    Id(String),
 
     _Eps,
     Comment,
@@ -142,11 +142,11 @@ lexer! {
     r#"\{"# => Token::LBrc,
     r#"\}"# => Token::RBrc,
 
-    r#""[^"\\]*(\\.[^"\\]*)*""# => Token::StringLit(&tok[1..(tok.len() - 1)]),
+    r#""[^"\\]*(\\.[^"\\]*)*""# => Token::StringLit(tok[1..(tok.len() - 1)].to_owned()),
     r#"'(\\.|[^'])'"# => Token::CharLit(parse_char(tok)),
     r#"[0-9]+|(0x[0-9a-fA-F]+)"# => Token::IntLit(parse_int(tok)),
     r#"[0-9]+\.[0-9]*"# => Token::DoubleLit(tok.parse::<f64>().unwrap()),
-    r#"[a-zA-Z][a-zA-Z0-9_]*"# => Token::Id(tok),
+    r#"[a-zA-Z][a-zA-Z0-9_]*"# => Token::Id(tok.to_owned()),
 
     r#"."# => Token::Unknown
 }
@@ -203,7 +203,7 @@ pub struct Span {
 }
 
 impl<'a> Iterator for Lexer<'a> {
-    type Item = (Token<'a>, Span);
+    type Item = (Token, Span);
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -243,7 +243,7 @@ mod tests {
     fn raw_next_token_char_init() {
         let mut input = r"char c = '\n';";
         let expected_res = vec![
-            Char, _Eps, Id("c"), _Eps, Assign, _Eps, CharLit('\n'), Semi
+            Char, _Eps, Id("c".to_owned()), _Eps, Assign, _Eps, CharLit('\n'), Semi
         ];
         let mut res = vec![];
 
@@ -281,7 +281,7 @@ mod tests {
     fn lexer_bitand_expr() {
         let lexer = Lexer::new(r"a=a&b;");
         let res: Vec<_> = lexer.into_iter().map(|t| t.0).collect();
-        let expected = vec![Id("a"), Assign, Id("a"), BitAnd, Id("b"), Semi];
+        let expected = vec![Id("a".to_owned()), Assign, Id("a".to_owned()), BitAnd, Id("b".to_owned()), Semi];
 
         assert_eq!(res, expected);
     }
@@ -289,14 +289,14 @@ mod tests {
     #[test]
     fn lexer_literals() {
         test_lexer(r"int* a=12;c=*a&&b;", vec![
-            Int, Mul, _Eps, Id("a"), Assign, IntLit(12), Semi, Id("c"), Assign, Mul, Id("a"), And, Id("b"), Semi
+            Int, Mul, Id("a".to_owned()), Assign, IntLit(12), Semi, Id("c".to_owned()), Assign, Mul, Id("a".to_owned()), And, Id("b".to_owned()), Semi
         ]);
-        test_lexer(r"double* a=0.34", vec![Double, Mul, _Eps, Id("a"), Assign, DoubleLit(0.34)]);
+        test_lexer(r"double* a=0.34", vec![Double, Mul, Id("a".to_owned()), Assign, DoubleLit(0.34)]);
     }
 
     #[test]
     fn lexer_weird_ids() {
-        test_lexer(r"int absolute_long=1", vec![Int, _Eps, Id("absolute_long"), Assign, IntLit(1)]);
+        test_lexer(r"int absolute_long=1", vec![Int, Id("absolute_long".to_owned()), Assign, IntLit(1)]);
     }
 
 }

@@ -1,133 +1,133 @@
 use crate::ty::*;
 use crate::op::*;
 
-pub struct Program<'a> {
+pub struct Program {
     // Besides function definition and declaration,
     // There are structdef, enumdef, uniondef, vardef, typedef too.
-    pub decl: Vec<Decl<'a>>
+    pub decl: Vec<Decl>
 }
 
-pub enum Decl<'a> {
-    TypeDef(TypeDef<'a>),
-    VarDef(VarDef<'a>),
-    FuncDef(FuncDef<'a>)
+pub enum Decl {
+    TypeDef(TypeDef),
+    VarDef(VarDef),
+    FuncDef(FuncDef)
 }
 
-pub struct FuncDef<'a> {
-    pub name: &'a str,
-    pub ret: Ty<'a>,
-    pub param: Vec<VarDef<'a>>,
-    pub block: Option<Block<'a>>,
+pub struct FuncDef {
+    pub name: String,
+    pub ret: Ty,
+    pub param: Vec<VarDef>,
+    pub block: Option<Block>,
     pub extern_: bool
 }
 
-pub struct Block<'a> {
-    pub stmts: Vec<Stmt<'a>>
+pub struct Block {
+    pub stmts: Vec<Stmt>
 }
 
-pub struct TypeDef<'a> {
-    pub ty: Ty<'a>,
-    pub name: &'a str
+pub struct TypeDef {
+    pub ty: Ty,
+    pub name: String
 }
 
-pub struct VarDef<'a> {
-    name: &'a str,
-    ty: Ty<'a>,
+pub struct VarDef {
+    name: String,
+    ty: Ty,
     // Note that const variables must have an initial value
     // If it is not initialized explicitly, it should have a default value
-    value: Option<Expr<'a>>,
+    value: Option<Expr>,
     // Should static be in Ty or VarDef ?
     static_: bool
 }
 
-pub struct Expr<'a> {
-    pub kind: ExprKind<'a>
+pub struct Expr {
+    pub kind: ExprKind
 }
 
-pub enum ExprKind<'a> {
-    VarSel(VarSel<'a>),
-    IndexSel(IndexSel<'a>),
+pub enum ExprKind {
+    VarSel(VarSel),
+    IndexSel(IndexSel),
     IntLit(i32),
     CharLit(char),
-    StringLit(&'a str),
-    Call(Call<'a>),
-    Unary(Unary<'a>),
-    Binary(Binary<'a>)
+    StringLit(String),
+    Call(Call),
+    Unary(Unary),
+    Binary(Binary)
 }
 
-pub struct VarSel<'a> {
-    pub name: &'a str
+pub struct VarSel {
+    pub name: String
 }
 
-pub struct IndexSel<'a> {
-    pub arr: Box<Expr<'a>>,
-    pub idx: Box<Expr<'a>>
+pub struct IndexSel {
+    pub arr: Box<Expr>,
+    pub idx: Box<Expr>
 }
 
-pub struct Call<'a> {
+pub struct Call {
     // should interpret func as varsel
-    pub func: Box<Expr<'a>>,
-    pub arg: Vec<Expr<'a>>,
-    pub func_ref: Option<&'a FuncDef<'a>>
+    pub func: Box<Expr>,
+    pub arg: Vec<Expr>,
+    pub func_ref: Option<FuncDef>
 }
 
-pub struct Unary<'a> {
+pub struct Unary {
     pub op: UnaOp,
-    pub r: Box<Expr<'a>>
+    pub r: Box<Expr>
 }
 
-pub struct Binary<'a> {
+pub struct Binary {
     pub op: BinOp,
-    pub l: Box<Expr<'a>>,
-    pub r: Box<Expr<'a>>
+    pub l: Box<Expr>,
+    pub r: Box<Expr>
 }
 
-pub struct Stmt<'a> {
-    pub kind: StmtKind<'a>
+pub struct Stmt {
+    pub kind: StmtKind
 }
 
-pub enum StmtKind<'a> {
-    Assign(Assign<'a>),
-    LocalVarDef(VarDef<'a>),
-    ExprEval(Expr<'a>),
+pub enum StmtKind {
+    Assign(Assign),
+    LocalVarDef(VarDef),
+    ExprEval(Expr),
     Skip(Skip),
 
-    If(If<'a>),
-    While(While<'a>),
-    DoWhile(DoWhile<'a>),
-    For(For<'a>),
-    Return(Option<Expr<'a>>),
+    If(If),
+    While(While),
+    DoWhile(DoWhile),
+    For(For),
+    Return(Option<Expr>),
     Break(Break),
     Continue(Continue)
 }
 
-pub struct Assign<'a> {
-    pub dst: Expr<'a>,
-    pub src: Expr<'a>
+pub struct Assign {
+    pub dst: Expr,
+    pub src: Expr
 }
 
-pub struct If<'a> {
-    pub cond: Expr<'a>,
-    pub on_true: Block<'a>,
-    pub on_false: Option<Block<'a>>
+pub struct If {
+    pub cond: Expr,
+    pub on_true: Block,
+    pub on_false: Option<Block>
 }
 
-pub struct While<'a> {
-    pub cond: Expr<'a>,
-    pub body: Block<'a>
+pub struct While {
+    pub cond: Expr,
+    pub body: Block
 }
 
-pub struct DoWhile<'a> {
-    pub cond: Expr<'a>,
-    pub body: Block<'a>
+pub struct DoWhile {
+    pub cond: Expr,
+    pub body: Block
 }
 
-pub struct For<'a> {
+pub struct For {
     // on early version of C, 'for (int i = 0;;)' is not supported
-    pub init: Expr<'a>,
-    pub cond: Expr<'a>,
-    pub update: Expr<'a>,
-    pub body: Block<'a>
+    pub init: Expr,
+    pub cond: Expr,
+    pub update: Expr,
+    pub body: Block
 }
 
 // dummy stmts
