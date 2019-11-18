@@ -18,7 +18,6 @@ pub struct FuncDef {
     pub ret: Ty,
     pub param: Vec<VarDef>,
     pub block: Option<Block>,
-    pub extern_: bool
 }
 
 pub struct Block {
@@ -31,13 +30,11 @@ pub struct TypeDef {
 }
 
 pub struct VarDef {
-    name: String,
-    ty: Ty,
+    pub name: String,
+    pub ty: Ty,
     // Note that const variables must have an initial value
     // If it is not initialized explicitly, it should have a default value
-    value: Option<Expr>,
-    // Should static be in Ty or VarDef ?
-    static_: bool
+    pub value: Option<Expr>,
 }
 
 pub struct Expr {
@@ -87,8 +84,8 @@ pub struct Stmt {
 }
 
 pub enum StmtKind {
-    Assign(Assign),
-    LocalVarDef(VarDef),
+    Assign(Assigning),
+    LocalVarDef(Vec<VarDef>),
     ExprEval(Expr),
     Skip(Skip),
 
@@ -101,7 +98,7 @@ pub enum StmtKind {
     Continue(Continue)
 }
 
-pub struct Assign {
+pub struct Assigning {
     pub dst: Expr,
     pub src: Expr
 }

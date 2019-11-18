@@ -1,6 +1,6 @@
 // This type system is incomplete, as it may have some custom types like structs,
 // enums, typedefs.
-use crate::ast::{VarDef, TypeDef};
+use crate::ast::VarDef;
 
 pub enum TyKind {
     // incomplete type 'void' could not be directly used
@@ -41,6 +41,7 @@ pub struct Array {
     pub len: Option<u32>
 }
 
+
 pub struct Pointer {
     pub tyk: Box<TyKind>
 }
@@ -58,7 +59,8 @@ pub struct Union {
 
 pub struct Func {
     pub ret: Box<TyKind>,
-    pub param: Vec<TyKind>
+    pub param: Vec<TyKind>,
+    pub args: bool
 }
 
 pub struct Ty {
