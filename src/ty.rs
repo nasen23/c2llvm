@@ -2,20 +2,36 @@
 // enums, typedefs.
 use crate::ast::{VarDef, TypeDef};
 
-
 pub enum TyKind {
     // incomplete type 'void' could not be directly used
     // It is either function return type or behind a pointer
     Void,
-    Char,
-    Int,
-    UInt,
+    Char(Sign),
+    Short(Sign),
+    Int(Sign),
+    Long(Sign),
+    LLong(Sign),
     Float,
     Double,
     Array(Array),
+    Func(Func),
     Pointer(Pointer),
     Struct(Struct),
-    TyDef(Box<TypeDef>)
+    Union(Union),
+    Enum,
+}
+
+pub enum Sign {
+    Signed,
+    Unsigned
+}
+
+pub enum StorClass {
+    Typedef,
+    Extern,
+    Static,
+    Auto,
+    Register
 }
 
 pub struct Array {
@@ -34,18 +50,30 @@ pub struct Struct {
     pub mem: Vec<VarDef>
 }
 
+pub struct Union {
+    pub name: String,
+    pub mem: Vec<VarDef>,
+    pub size: usize
+}
+
+pub struct Func {
+    pub ret: Box<TyKind>,
+    pub param: Vec<TyKind>
+}
+
 pub struct Ty {
     pub const_: bool,
     pub kind: TyKind
 }
 
+use Sign::*;
+
 impl Ty {
     pub const fn new(kind: TyKind, const_: bool) -> Ty { Ty { const_, kind } }
 
     pub const fn void() -> Ty { Ty::new(TyKind::Void, false) }
-    pub const fn char() -> Ty { Ty::new(TyKind::Char, false) }
-    pub const fn int() -> Ty { Ty::new(TyKind::Int, false) }
-    pub const fn uint() -> Ty { Ty::new(TyKind::UInt, false) }
+    pub const fn char() -> Ty { Ty::new(TyKind::Char(Signed), false) }
+    pub const fn int() -> Ty { Ty::new(TyKind::Int(Signed), false) }
     pub const fn float() -> Ty { Ty::new(TyKind::Float, false) }
     pub const fn double() -> Ty { Ty::new(TyKind::Double, false) }
     pub fn array(kind: TyKind, len: Option<u32>) -> Ty {
