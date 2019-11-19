@@ -1,6 +1,6 @@
 pub enum BinOp {
     Add, Sub, Mul, Div, Mod, And, Or, Le, Lt, Ge, Gt, Eq, Ne, BitOr, BitAnd, BitXor,
-    BitLSft, BitRSft
+    BitLSft, BitRSft, Comma
 }
 
 pub enum UnaOp {
@@ -28,7 +28,8 @@ impl BinOp {
             BitAnd => Some(l & r),
             BitXor => Some(l ^ r),
             BitLSft => Some(l << r),
-            BitRSft => Some(l >> r)
+            BitRSft => Some(l >> r),
+            Comma => Some(l)
         }
     }
 
