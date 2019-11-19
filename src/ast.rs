@@ -43,7 +43,7 @@ pub struct Expr {
 
 pub enum ExprKind {
     VarSel(VarSel),
-    IndexSel(IndexSel),
+    PtrSel(PtrSel),
     IntLit(i32),
     CharLit(char),
     StringLit(String),
@@ -56,9 +56,8 @@ pub struct VarSel {
     pub name: String
 }
 
-pub struct IndexSel {
-    pub arr: Box<Expr>,
-    pub idx: Box<Expr>
+pub struct PtrSel {
+    pub expr: Box<Expr>,
 }
 
 pub struct Call {
@@ -85,7 +84,7 @@ pub struct Stmt {
 
 pub enum StmtKind {
     Assign(Assigning),
-    LocalVarDef(Vec<VarDef>),
+    LocalVarDef(VarDef),
     ExprEval(Expr),
     Skip(Skip),
 
@@ -121,9 +120,9 @@ pub struct DoWhile {
 
 pub struct For {
     // on early version of C, 'for (int i = 0;;)' is not supported
-    pub init: Expr,
+    pub init: Box<Stmt>,
     pub cond: Expr,
-    pub update: Expr,
+    pub update: Box<Stmt>,
     pub body: Block
 }
 
