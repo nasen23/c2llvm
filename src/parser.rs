@@ -135,6 +135,9 @@ parser! {
         ty[ty] Id(name) Assign expr[e] => ast::Stmt { // int a = b + c;
             kind: ast::StmtKind::LocalVarDef(ast::VarDef { name, ty, value: Some(e) })
         },
+        ty[ty] Id(name) Assign atom_expr[e] => ast::Stmt { // int a = b + c;
+            kind: ast::StmtKind::LocalVarDef(ast::VarDef { name, ty, value: Some(e) })
+        },
         expr[e] => ast::Stmt {
             kind: ast::StmtKind::ExprEval(e)
         },
@@ -183,6 +186,10 @@ parser! {
         expr[l] BitLSft atom_expr[r] => mk_bin(l, r, BinOp::BitLSft),
         expr[l] BitRSft atom_expr[r] => mk_bin(l, r, BinOp::BitRSft),
         expr[l] Comma atom_expr[r] => mk_bin(l, r, BinOp::Comma),
+
+        Sub atom_expr[r] => mk_una(r, UnaOp::Neg),
+        Not atom_expr[r] => mk_una(r, UnaOp::Not),
+        BitRev atom_expr[r] => mk_una(r, UnaOp::BitRev)
     }
 
     atom_expr: ast::Expr {
@@ -233,4 +240,31 @@ fn mk_una(r: ast::Expr, op: UnaOp) -> ast::Expr {
     ast::Expr { kind: ast::ExprKind::Unary(ast::Unary {
         op, r: Box::new(r)
     })}
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lexer::Lexer;
+
+    #[test]
+    fn global_vardef() {
+        let program = parse(Lexer::new("int a; int b;")).unwrap();
+        assert_eq!("defvar a: int\ndefvar b: int\n", program.to_string());
+    }
+
+    #[test]
+    fn simple_main_function() {
+        let program = parse(Lexer::new(r###"
+        int main() {
+            int a = 1;
+            int b = a + 2;
+        }
+        "###)).unwrap();
+        assert_eq!(r###"defun main() -> int {
+defvar a: int = 1
+defvar b: int = a bop 2
+}
+"###, program.to_string());
+    }
 }

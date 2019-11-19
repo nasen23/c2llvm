@@ -1,6 +1,7 @@
 // This type system is incomplete, as it may have some custom types like structs,
 // enums, typedefs.
 use crate::ast::VarDef;
+use std::fmt::{Display, Formatter, Result};
 
 pub enum TyKind {
     // incomplete type 'void' could not be directly used
@@ -86,4 +87,31 @@ impl Ty {
     }
 
     pub fn is_const(&self) -> bool { self.const_ }
+}
+
+impl Display for TyKind {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        use TyKind::*;
+
+        match self {
+            Void => write!(f, "void"),
+            Char(_) => write!(f, "char"),
+            Short(_) => write!(f, "short"),
+            Int(_) => write!(f, "int"),
+            Long(_) => write!(f, "long"),
+            LLong(_) => write!(f, "long long"),
+            Float => write!(f, "float"),
+            Double => write!(f, "double"),
+            Array(ref a) => write!(f, "{}[]", a.tyk),
+            Pointer(ref p) => write!(f, "{}*", p.tyk),
+            _ => Ok(())
+        }
+    }
+}
+
+impl Display for Ty {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        if self.const_ { write!(f, "const "); }
+        write!(f, "{}", self.kind)
+    }
 }
