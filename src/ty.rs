@@ -1,52 +1,84 @@
 // This type system is incomplete, as it may have some custom types like structs,
 // enums, typedefs.
-use crate::ast::{VarDef, TypeDef};
+use crate::ast::VarDef;
+use std::fmt::{Display, Formatter, Result};
 
-pub enum TyKind<'a> {
+pub enum TyKind {
     // incomplete type 'void' could not be directly used
     // It is either function return type or behind a pointer
     Void,
-    Char,
-    Int,
-    UInt,
+    Char(Sign),
+    Short(Sign),
+    Int(Sign),
+    Long(Sign),
+    LLong(Sign),
     Float,
     Double,
-    Array(Array<'a>),
-    Pointer(Pointer<'a>),
-    Struct(Struct<'a>),
-    TyDef(&'a TypeDef<'a>)
+    Array(Array),
+    Func(Func),
+    Pointer(Pointer),
+    Struct(Struct),
+    Union(Union),
+    Enum,
 }
 
-pub struct Array<'a> {
+pub enum Sign {
+    Signed,
+    Unsigned
+}
+
+pub enum StorClass {
+    Typedef,
+    Extern,
+    Static,
+    Auto,
+    Register
+}
+
+pub struct Array {
     // initialized array must have a explicit size
     // array in function param is okay not to have a length
-    pub tyk: Box<TyKind<'a>>,
+    pub tyk: Box<TyKind>,
     pub len: Option<u32>
 }
 
-pub struct Pointer<'a> {
-    pub tyk: Box<TyKind<'a>>
+
+pub struct Pointer {
+    pub tyk: Box<TyKind>
 }
 
-pub struct Struct<'a> {
-    pub name: &'a str,
-    pub mem: Vec<VarDef<'a>>
+pub struct Struct {
+    pub name: String,
+    pub mem: Vec<VarDef>
 }
 
-pub struct Ty<'a> {
+pub struct Union {
+    pub name: String,
+    pub mem: Vec<VarDef>,
+    pub size: usize
+}
+
+pub struct Func {
+    pub ret: Box<TyKind>,
+    pub param: Vec<TyKind>,
+    pub args: bool
+}
+
+pub struct Ty {
     pub const_: bool,
-    pub kind: TyKind<'a>
+    pub kind: TyKind
 }
 
-impl<'a> Ty<'a> {
+use Sign::*;
+
+impl Ty {
     pub const fn new(kind: TyKind, const_: bool) -> Ty { Ty { const_, kind } }
 
-    pub const fn void() -> Ty<'a> { Ty::new(TyKind::Void, false) }
-    pub const fn char() -> Ty<'a> { Ty::new(TyKind::Char, false) }
-    pub const fn int() -> Ty<'a> { Ty::new(TyKind::Int, false) }
-    pub const fn uint() -> Ty<'a> { Ty::new(TyKind::UInt, false) }
-    pub const fn float() -> Ty<'a> { Ty::new(TyKind::Float, false) }
-    pub const fn double() -> Ty<'a> { Ty::new(TyKind::Double, false) }
+    pub const fn void() -> Ty { Ty::new(TyKind::Void, false) }
+    pub const fn char() -> Ty { Ty::new(TyKind::Char(Signed), false) }
+    pub const fn int() -> Ty { Ty::new(TyKind::Int(Signed), false) }
+    pub const fn float() -> Ty { Ty::new(TyKind::Float, false) }
+    pub const fn double() -> Ty { Ty::new(TyKind::Double, false) }
     pub fn array(kind: TyKind, len: Option<u32>) -> Ty {
         Ty::new(TyKind::Array(Array { tyk: Box::new(kind), len }), false)
     }
@@ -55,4 +87,31 @@ impl<'a> Ty<'a> {
     }
 
     pub fn is_const(&self) -> bool { self.const_ }
+}
+
+impl Display for TyKind {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        use TyKind::*;
+
+        match self {
+            Void => write!(f, "void"),
+            Char(_) => write!(f, "char"),
+            Short(_) => write!(f, "short"),
+            Int(_) => write!(f, "int"),
+            Long(_) => write!(f, "long"),
+            LLong(_) => write!(f, "long long"),
+            Float => write!(f, "float"),
+            Double => write!(f, "double"),
+            Array(ref a) => write!(f, "{}[]", a.tyk),
+            Pointer(ref p) => write!(f, "{}*", p.tyk),
+            _ => Ok(())
+        }
+    }
+}
+
+impl Display for Ty {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        if self.const_ { write!(f, "const "); }
+        write!(f, "{}", self.kind)
+    }
 }
