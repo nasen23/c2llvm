@@ -43,9 +43,10 @@ pub enum Token {
     Mod,
     Assign,
     Lt,
-    Gt
-        ,
+    Gt,
+
     Dot,
+    Arrow,
     Comma,
     Semi,
     Colon,
@@ -124,6 +125,7 @@ lexer! {
     r#"="# => Token::Assign,
     r#"<"# => Token::Lt,
     r#">"# => Token::Gt,
+    r#"->"# => Token::Arrow,
     r#"\."# => Token::Dot,
     r#","# => Token::Comma,
     r#";"# => Token::Semi,
