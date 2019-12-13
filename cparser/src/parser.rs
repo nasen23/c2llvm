@@ -31,8 +31,8 @@ parser! {
         vardef[var] Semi => ast::Decl::VarDef(var),
         typedef[ty] Semi => ast::Decl::TypeDef(ty),
         funcdef[func] => ast::Decl::FuncDef(func),
-        structdef[struct_] => ast::Decl::StructDef(struct_),
-        enumdef[enum_] => ast::Decl::EnumDef(enum_),
+        structdef[struct_] Semi => ast::Decl::StructDef(struct_),
+        enumdef[enum_] Semi => ast::Decl::EnumDef(enum_),
     }
 
     typedef: ast::TypeDef {
@@ -51,13 +51,13 @@ parser! {
     }
 
     structdef: ty::Struct {
-        Struct Id(name) Semi => ty::Struct {
+        Struct Id(name) => ty::Struct {
             name: Some(name), mem: vec![]
         },
-        Struct Id(name) structbody[mem] Semi => ty::Struct {
+        Struct Id(name) structbody[mem] => ty::Struct {
             name: Some(name), mem
         },
-        Struct structbody[mem] Semi => ty::Struct {
+        Struct structbody[mem] => ty::Struct {
             name: None, mem
         },
         // struct with no name and body is not allowed
@@ -68,8 +68,11 @@ parser! {
     }
 
     enumdef: ty::Enum {
-        Enum Id(name) LBrc valuelist[mem] RBrc Semi => ty::Enum {
+        Enum Id(name) LBrc valuelist[mem] RBrc => ty::Enum {
             name: Some(name), mem
+        },
+        Enum LBrc valuelist[mem] RBrc => ty::Enum {
+            name: None, mem
         }
     }
 
@@ -121,7 +124,9 @@ parser! {
         Int => ty::Ty::int(),
         Float => ty::Ty::float(),
         Double => ty::Ty::double(),
-        ty[ty] Mul => ty::Ty::pointer(ty.kind)
+        ty[ty] Mul => ty::Ty::pointer(ty.kind),
+        structdef[s] => ty::Ty::struct_(s),
+        enumdef[e] => ty::Ty::enum_(e),
     }
 
     block: ast::Block {

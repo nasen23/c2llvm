@@ -90,6 +90,12 @@ impl Ty {
     pub fn pointer(kind: TyKind) -> Ty {
         Ty::new(TyKind::Pointer(Pointer { tyk: Box::new(kind) }), false)
     }
+    pub fn struct_(s: Struct) -> Ty {
+        Ty::new(TyKind::Struct(s), false)
+    }
+    pub fn enum_(e: Enum) -> Ty {
+        Ty::new(TyKind::Enum(e), false)
+    }
 
     pub fn is_const(&self) -> bool { self.const_ }
 }
