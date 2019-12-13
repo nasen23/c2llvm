@@ -19,7 +19,7 @@ pub enum TyKind {
     Pointer(Pointer),
     Struct(Struct),
     Union(Union),
-    Enum,
+    Enum(Enum),
 }
 
 pub enum Sign {
@@ -48,14 +48,19 @@ pub struct Pointer {
 }
 
 pub struct Struct {
-    pub name: String,
+    pub name: Option<String>,
     pub mem: Vec<VarDef>
 }
 
 pub struct Union {
-    pub name: String,
+    pub name: Option<String>,
     pub mem: Vec<VarDef>,
     pub size: usize
+}
+
+pub struct Enum {
+    pub name: Option<String>,
+    pub mem: Vec<(String, Option<i32>)>,
 }
 
 pub struct Func {
@@ -113,5 +118,17 @@ impl Display for Ty {
     fn fmt(&self, f: &mut Formatter) -> Result {
         if self.const_ { write!(f, "const "); }
         write!(f, "{}", self.kind)
+    }
+}
+
+impl Display for Struct {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{}", self.name.as_ref().map_or("", |v| v.as_str()))
+    }
+}
+
+impl Display for Enum {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{}", self.name.as_ref().map_or("", |v| v.as_str()))
     }
 }

@@ -11,7 +11,10 @@ pub struct Program {
 pub enum Decl {
     TypeDef(TypeDef),
     VarDef(VarDef),
-    FuncDef(FuncDef)
+    FuncDef(FuncDef),
+    StructDef(Struct),
+    EnumDef(Enum),
+    // UnionDef(Union)
 }
 
 pub struct FuncDef {
@@ -149,10 +152,12 @@ impl Display for Program {
 
 impl Display for Decl {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        match self {
-            Decl::TypeDef(ref d) => write!(f, "deftype {} as {}", d.ty, d.name),
-            Decl::VarDef(ref d) => write!(f, "{}", d),
-            Decl::FuncDef(ref d) => write!(f, "defun {}", d),
+        match &self {
+            Decl::TypeDef(d) => write!(f, "deftype {} as {}", d.ty, d.name),
+            Decl::VarDef(d) => write!(f, "{}", d),
+            Decl::FuncDef(d) => write!(f, "defun {}", d),
+            Decl::StructDef(d) => write!(f, "struct {}", d),
+            Decl::EnumDef(d) => write!(f, "enum {}", d)
         }
     }
 }

@@ -1,6 +1,6 @@
 use plex::parser;
 use crate::ast;
-use crate::ty::*;
+use crate::ty;
 use crate::op::*;
 use crate::lexer::{Token, Token::*, Span};
 
@@ -30,7 +30,9 @@ parser! {
     decl: ast::Decl {
         vardef[var] Semi => ast::Decl::VarDef(var),
         typedef[ty] Semi => ast::Decl::TypeDef(ty),
-        funcdef[func] => ast::Decl::FuncDef(func)
+        funcdef[func] => ast::Decl::FuncDef(func),
+        structdef[struct_] => ast::Decl::StructDef(struct_),
+        enumdef[enum_] => ast::Decl::EnumDef(enum_),
     }
 
     typedef: ast::TypeDef {
@@ -48,10 +50,56 @@ parser! {
         }
     }
 
+    structdef: ty::Struct {
+        Struct Id(name) Semi => ty::Struct {
+            name: Some(name), mem: vec![]
+        },
+        Struct Id(name) structbody[mem] Semi => ty::Struct {
+            name: Some(name), mem
+        },
+        Struct structbody[mem] Semi => ty::Struct {
+            name: None, mem
+        },
+        // struct with no name and body is not allowed
+    }
+
+    structbody: Vec<ast::VarDef> {
+        LBrc vardefs[mems] RBrc => mems
+    }
+
+    enumdef: ty::Enum {
+        Enum Id(name) LBrc valuelist[mem] RBrc Semi => ty::Enum {
+            name: Some(name), mem
+        }
+    }
+
+    valuelist: Vec<(String, Option<i32>)> {
+        => vec![],
+        value[val] => vec![val],
+        valuelist[mut list] Comma value[val] => {
+            list.push(val);
+            list
+        }
+    }
+
+    value: (String, Option<i32>) {
+        Id(name) => (name, None),
+        Id(name) Assign IntLit(val) => (name, Some(val))
+    }
+
     vardeflist: Vec<ast::VarDef> {
         => vec![],
         vardef[decl] => vec![decl], // (int a)
         vardeflist[mut decls] Comma vardef[decl] => { // (int a, int b)
+            decls.push(decl);
+            decls
+        }
+    }
+
+    vardefs: Vec<ast::VarDef> {
+        => vec![],
+        vardef[decl] => vec![decl],
+        vardefs[mut decls] Semi vardef[decl] => { // int a; int b (used in struct)
             decls.push(decl);
             decls
         }
@@ -65,6 +113,15 @@ parser! {
         // ty[ty] Id(name) Assign expr[e] => VarDef { // int a = 1 + 2
         //     name, ty, value: Some(e)
         // }
+    }
+
+    ty: ty::Ty {
+        Void => ty::Ty::void(),
+        Char => ty::Ty::char(),
+        Int => ty::Ty::int(),
+        Float => ty::Ty::float(),
+        Double => ty::Ty::double(),
+        ty[ty] Mul => ty::Ty::pointer(ty.kind)
     }
 
     block: ast::Block {
@@ -217,15 +274,6 @@ parser! {
                 expr: Box::new(mk_bin(l, expr, BinOp::Add))
             }
         }
-    }
-
-    ty: Ty {
-        Void => Ty::void(),
-        Char => Ty::char(),
-        Int => Ty::int(),
-        Float => Ty::float(),
-        Double => Ty::double(),
-        ty[ty] Mul => Ty::pointer(ty.kind)
     }
 
 }
