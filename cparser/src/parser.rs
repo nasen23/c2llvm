@@ -185,7 +185,7 @@ parser! {
     }
 
     simple: Stmt {
-        lvalue[dst] Assign expr[src] => Stmt::Assign(Assignment { dst, src }),
+        // lvalue[dst] Assign expr[src] => Stmt::Assign(Assignment { dst, src }),
         vardef[vardef] => Stmt::LocalVarDef(vardef),
         ty[ty] Id(name) Assign expr[e] => // int a = b + c;
             Stmt::LocalVarDef(VarDef { name, ty, value: Some(e) }),

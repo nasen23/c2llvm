@@ -49,7 +49,8 @@ pub enum Expr {
     StringLit(String),
     Call(Call),
     Unary(Unary),
-    Binary(Binary)
+    Binary(Binary),
+    Assign(Assignment)
 }
 
 pub struct VarSel {
@@ -65,6 +66,7 @@ pub struct Call {
     pub func: Box<Expr>,
     pub arg: Vec<Expr>,
     pub func_ref: Option<FuncDef>
+
 }
 
 pub struct Unary {
@@ -78,8 +80,12 @@ pub struct Binary {
     pub r: Box<Expr>
 }
 
+pub struct Assignment {
+    pub dst: Box<Expr>,
+    pub src: Box<Expr>
+}
+
 pub enum Stmt {
-    Assign(Assignment),
     LocalVarDef(VarDef),
     ExprEval(Expr),
     Skip(Skip),
@@ -91,11 +97,6 @@ pub enum Stmt {
     Return(Option<Expr>),
     Break(Break_),
     Continue(Continue_)
-}
-
-pub struct Assignment {
-    pub dst: Expr,
-    pub src: Expr
 }
 
 pub struct If_ {
@@ -196,7 +197,6 @@ impl Display for Stmt {
         use Stmt::*;
 
         match self {
-            Assign(ref a) => write!(f, "{} := {}", a.dst, a.src),
             LocalVarDef(ref d) => write!(f, "{}", d),
             ExprEval(ref e) => write!(f, "{}", e),
             If(ref if_) => write!(f, "if {} {}{}", if_.cond, if_.on_true,
@@ -222,7 +222,8 @@ impl Display for Expr {
             StringLit(ref s) => write!(f, "{}", s),
             Call(ref c) => write!(f, "{}", c.func),
             Unary(ref u) => write!(f, "uop {}", u.r),
-            Binary(ref b) => write!(f, "{} bop {}", b.l, b.r)
+            Binary(ref b) => write!(f, "{} bop {}", b.l, b.r),
+            Assign(ref a) => write!(f, "{} := {}", a.dst, a.src)
         }
     }
 }
