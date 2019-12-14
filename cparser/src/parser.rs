@@ -207,6 +207,8 @@ parser! {
         vardef[vardef] Semi => Stmt::LocalVarDef(vardef),
         ty[ty] Id(name) Assign expr[e] Semi => // int a = b + c;
             Stmt::LocalVarDef(VarDef { name, ty, value: Some(e) }),
+        ty[ty] Id(name) LBrk IntLit(len) RBrk =>
+            Stmt::LocalVarDef(VarDef { name, ty: Ty::array(ty.kind, Some(len)) }),
         expr[e] Semi => Stmt::ExprEval(e),
         Semi => Stmt::Skip
     }
