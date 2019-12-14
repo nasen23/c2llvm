@@ -27,21 +27,12 @@ pub enum Sign {
     Unsigned
 }
 
-pub enum StorClass {
-    Typedef,
-    Extern,
-    Static,
-    Auto,
-    Register
-}
-
 pub struct Array {
     // initialized array must have a explicit size
     // array in function param is okay not to have a length
     pub tyk: Box<TyKind>,
     pub len: Option<u32>
 }
-
 
 pub struct Pointer {
     pub tyk: Box<TyKind>
@@ -70,34 +61,59 @@ pub struct Func {
 }
 
 pub struct Ty {
-    pub const_: bool,
-    pub kind: TyKind
+    pub stor: StorClass,
+    pub quals: Vec<Qualifier>,
+    pub kind: TyKind,
+}
+
+pub enum StorClass {
+    Typedef,
+    Extern,
+    Static,
+    Auto,
+    Register,
+    None,
+}
+
+pub enum Qualifier {
+    Const,
+    Volatile,
 }
 
 use Sign::*;
 
 impl Ty {
-    pub const fn new(kind: TyKind, const_: bool) -> Ty { Ty { const_, kind } }
+    pub fn new(kind: TyKind) -> Ty {
+        Ty { kind, stor: StorClass::None, quals: vec![] }
+    }
 
-    pub const fn void() -> Ty { Ty::new(TyKind::Void, false) }
-    pub const fn char() -> Ty { Ty::new(TyKind::Char(Signed), false) }
-    pub const fn int() -> Ty { Ty::new(TyKind::Int(Signed), false) }
-    pub const fn float() -> Ty { Ty::new(TyKind::Float, false) }
-    pub const fn double() -> Ty { Ty::new(TyKind::Double, false) }
+    pub fn void() -> Ty { Ty::new(TyKind::Void) }
+    pub fn char() -> Ty { Ty::new(TyKind::Char(Signed)) }
+    pub fn int() -> Ty { Ty::new(TyKind::Int(Signed)) }
+    pub fn float() -> Ty { Ty::new(TyKind::Float) }
+    pub fn double() -> Ty { Ty::new(TyKind::Double) }
     pub fn array(kind: TyKind, len: Option<u32>) -> Ty {
-        Ty::new(TyKind::Array(Array { tyk: Box::new(kind), len }), false)
+        Ty::new(TyKind::Array(Array { tyk: Box::new(kind), len }))
     }
     pub fn pointer(kind: TyKind) -> Ty {
-        Ty::new(TyKind::Pointer(Pointer { tyk: Box::new(kind) }), false)
+        Ty::new(TyKind::Pointer(Pointer { tyk: Box::new(kind) }))
     }
     pub fn struct_(s: Struct) -> Ty {
-        Ty::new(TyKind::Struct(s), false)
+        Ty::new(TyKind::Struct(s))
     }
     pub fn enum_(e: Enum) -> Ty {
-        Ty::new(TyKind::Enum(e), false)
+        Ty::new(TyKind::Enum(e))
     }
 
-    pub fn is_const(&self) -> bool { self.const_ }
+    pub fn with_stor(mut self, stor: StorClass) -> Self {
+        self.stor = stor;
+        self
+    }
+
+    pub fn with_qual(mut self, qual: Qualifier) -> Self {
+        self.quals.push(qual);
+        self
+    }
 }
 
 impl Display for TyKind {
@@ -122,7 +138,6 @@ impl Display for TyKind {
 
 impl Display for Ty {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        if self.const_ { write!(f, "const "); }
         write!(f, "{}", self.kind)
     }
 }

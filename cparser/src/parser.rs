@@ -120,15 +120,29 @@ parser! {
         // }
     }
 
-    ty: ty::Ty {
+    sim_ty: ty::Ty {
         Void => ty::Ty::void(),
         Char => ty::Ty::char(),
         Int => ty::Ty::int(),
         Float => ty::Ty::float(),
         Double => ty::Ty::double(),
-        ty[ty] Mul => ty::Ty::pointer(ty.kind),
         structdef[s] => ty::Ty::struct_(s),
         enumdef[e] => ty::Ty::enum_(e),
+    }
+
+    ty: ty::Ty {
+        sim_ty[ty] => ty,
+        stor[s] ty[ty] => ty.with_stor(s),
+        qual[q] ty[ty] => ty.with_qual(q),
+        sim_ty[ty] Mul => ty::Ty::pointer(ty.kind),
+    }
+
+    stor: ty::StorClass {
+        Extern => ty::StorClass::Extern,
+    }
+
+    qual: ty::Qualifier {
+        Const => ty::Qualifier::Const,
     }
 
     block: Block {
