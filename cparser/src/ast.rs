@@ -43,7 +43,6 @@ pub struct VarDef {
 
 pub enum Expr {
     VarSel(VarSel),
-    PtrSel(PtrSel),
     IntLit(i32),
     CharLit(char),
     StringLit(String),
@@ -55,10 +54,6 @@ pub enum Expr {
 
 pub struct VarSel {
     pub name: String
-}
-
-pub struct PtrSel {
-    pub expr: Box<Expr>,
 }
 
 pub struct Call {
@@ -216,7 +211,6 @@ impl Display for Expr {
 
         match self {
             VarSel(ref v) => write!(f, "{}", v.name),
-            PtrSel(ref p) => write!(f, "*({})", p.expr),
             IntLit(ref i) => write!(f, "{}", i),
             CharLit(ref c) => write!(f, "{}", c),
             StringLit(ref s) => write!(f, "{}", s),

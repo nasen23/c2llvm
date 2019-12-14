@@ -251,7 +251,7 @@ parser! {
 
     lvalue: Expr {
         varsel[sel] => Expr::VarSel(sel),
-        ptrsel[sel] => Expr::PtrSel(sel),
+        // ptrsel[sel] => Expr::PtrSel(sel),
     }
 
     varsel: VarSel {
