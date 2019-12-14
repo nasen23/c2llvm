@@ -353,15 +353,13 @@ mod tests {
 
     #[test]
     fn simple_main_function() {
-        let program = parse(Lexer::new(r###"int main() {
-            int a = 1;
-            int b = a + 2;
-        }
-        "###)).unwrap();
-        assert_eq!(r###"defun main() -> int {
-defvar a: int = 1
-defvar b: int = a bop 2
-}
-"###, program.to_string());
+        let program = parse(Lexer::new("int main() {\n\
+                                            int a = 1;\n\
+                                            int b = a + 2;\n\
+                                        }")).unwrap();
+        assert_eq!("defun main() -> int {\n\
+                    defvar a: int = 1\n\
+                    defvar b: int = a bop 2\n\
+                    }\n", program.to_string());
     }
 }
