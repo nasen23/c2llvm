@@ -1,5 +1,5 @@
 use plex::parser;
-use crate::ast;
+use crate::ast::*;
 use crate::ty;
 use crate::op::*;
 use crate::lexer::{Token, Token::*, Span};
@@ -15,11 +15,11 @@ parser! {
         }
     }
 
-    program: ast::Program {
-        decls[decls] => ast::Program { decl: decls }
+    program: Program {
+        decls[decls] => Program { decl: decls }
     }
 
-    decls: Vec<ast::Decl> {
+    decls: Vec<Decl> {
         => vec![],
         decls[mut decls] decl[decl] => {
             decls.push(decl);
@@ -27,25 +27,25 @@ parser! {
         }
     }
 
-    decl: ast::Decl {
-        vardef[var] Semi => ast::Decl::VarDef(var),
-        typedef[ty] Semi => ast::Decl::TypeDef(ty),
-        funcdef[func] => ast::Decl::FuncDef(func),
-        structdef[struct_] Semi => ast::Decl::StructDef(struct_),
-        enumdef[enum_] Semi => ast::Decl::EnumDef(enum_),
+    decl: Decl {
+        vardef[var] Semi => Decl::VarDef(var),
+        typedef[ty] Semi => Decl::TypeDef(ty),
+        funcdef[func] => Decl::FuncDef(func),
+        structdef[struct_] Semi => Decl::StructDef(struct_),
+        enumdef[enum_] Semi => Decl::EnumDef(enum_),
     }
 
-    typedef: ast::TypeDef {
-        Typedef ty[ty] Id(name) => ast::TypeDef {
+    typedef: TypeDef {
+        Typedef ty[ty] Id(name) => TypeDef {
             ty, name
         }
     }
 
-    funcdef: ast::FuncDef {
-        ty[ty] Id(name) LPar vardeflist[defs] RPar block[block] => ast::FuncDef { // int some(int) { ... };
+    funcdef: FuncDef {
+        ty[ty] Id(name) LPar vardeflist[defs] RPar block[block] => FuncDef { // int some(int) { ... };
             name, ret: ty, param: defs, block: Some(block)
         },
-        ty[ty] Id(name) LPar vardeflist[defs] RPar Semi => ast::FuncDef { // int some(int);
+        ty[ty] Id(name) LPar vardeflist[defs] RPar Semi => FuncDef { // int some(int);
             name, ret: ty, param: defs, block: None
         }
     }
@@ -63,7 +63,7 @@ parser! {
         // struct with no name and body is not allowed
     }
 
-    structbody: Vec<ast::VarDef> {
+    structbody: Vec<VarDef> {
         LBrc vardefs[mems] RBrc => mems
     }
 
@@ -90,7 +90,7 @@ parser! {
         Id(name) Assign IntLit(val) => (name, Some(val))
     }
 
-    vardeflist: Vec<ast::VarDef> {
+    vardeflist: Vec<VarDef> {
         => vec![],
         vardef[decl] => vec![decl], // (int a)
         vardeflist[mut decls] Comma vardef[decl] => { // (int a, int b)
@@ -99,7 +99,7 @@ parser! {
         }
     }
 
-    vardefs: Vec<ast::VarDef> {
+    vardefs: Vec<VarDef> {
         => vec![],
         vardef[decl] => vec![decl],
         vardefs[mut decls] Semi vardef[decl] => { // int a; int b (used in struct)
@@ -108,8 +108,8 @@ parser! {
         }
     }
 
-    vardef: ast::VarDef {
-        ty[ty] Id(name) => ast::VarDef { // int a
+    vardef: VarDef {
+        ty[ty] Id(name) => VarDef { // int a
             name, ty, value: None
         }
         // function definition does not allow something like (int a = 1, int b)
@@ -129,11 +129,11 @@ parser! {
         enumdef[e] => ty::Ty::enum_(e),
     }
 
-    block: ast::Block {
-        LBrc stmts[stmts] RBrc => ast::Block { stmts }
+    block: Block {
+        LBrc stmts[stmts] RBrc => Block { stmts }
     }
 
-    stmts: Vec<ast::Stmt> {
+    stmts: Vec<Stmt> {
         => vec![],
         stmts[mut stmts] stmt[s] => {
             stmts.push(s);
@@ -141,74 +141,74 @@ parser! {
         }
     }
 
-    stmt: ast::Stmt {
+    stmt: Stmt {
         simple[s] Semi => s,
-        if_[kind] => ast::Stmt { kind },
-        while_[kind] => ast::Stmt { kind },
-        for_[kind] => ast::Stmt { kind },
-        return_[kind] => ast::Stmt { kind },
-        break_[kind] => ast::Stmt { kind },
-        continue_[kind] => ast::Stmt { kind },
+        if_[kind] => Stmt { kind },
+        while_[kind] => Stmt { kind },
+        for_[kind] => Stmt { kind },
+        return_[kind] => Stmt { kind },
+        break_[kind] => Stmt { kind },
+        continue_[kind] => Stmt { kind },
     }
 
-    if_: ast::StmtKind {
+    if_: StmtKind {
         // if (cond) on_true else on_false
         If LPar expr[cond] RPar block[on_true] else_[on_false] =>
-            ast::StmtKind::If(ast::If { cond, on_true, on_false })
+            StmtKind::If(If_ { cond, on_true, on_false })
     }
 
-    else_: Option<ast::Block> {
+    else_: Option<Block> {
         => None,
         Else block[b] => Some(b)
     }
 
-    while_: ast::StmtKind {
+    while_: StmtKind {
         // while (cond) body
         While LPar expr[cond] RPar block[body] =>
-            ast::StmtKind::While(ast::While { cond, body })
+            StmtKind::While(While_ { cond, body })
     }
 
-    for_: ast::StmtKind {
+    for_: StmtKind {
         // for (init;cond;update) body
         For LPar simple[init] Semi expr[cond] Semi simple[update] RPar block[body] =>
-            ast::StmtKind::For(ast::For { init: Box::new(init), cond, update: Box::new(update), body })
+            StmtKind::For(For_ { init: Box::new(init), cond, update: Box::new(update), body })
     }
 
-    return_: ast::StmtKind {
-        Return Semi => ast::StmtKind::Return(None),
-        Return expr[e] Semi => ast::StmtKind::Return(Some(e))
+    return_: StmtKind {
+        Return Semi => StmtKind::Return(None),
+        Return expr[e] Semi => StmtKind::Return(Some(e))
     }
 
-    break_: ast::StmtKind {
-        Break Semi => ast::StmtKind::Break(ast::Break)
+    break_: StmtKind {
+        Break Semi => StmtKind::Break(Break_)
     }
 
-    continue_: ast::StmtKind {
-        Continue Semi => ast::StmtKind::Continue(ast::Continue)
+    continue_: StmtKind {
+        Continue Semi => StmtKind::Continue(Continue_)
     }
 
-    simple: ast::Stmt {
-        lvalue[dst] Assign expr[src] => ast::Stmt { //  a = a + b
-            kind: ast::StmtKind::Assign(ast::Assigning { dst, src })
+    simple: Stmt {
+        lvalue[dst] Assign expr[src] => Stmt { //  a = a + b
+            kind: StmtKind::Assign(Assignment { dst, src })
         },
-        vardef[vardef] => ast::Stmt { // int a;
-            kind: ast::StmtKind::LocalVarDef(vardef)
+        vardef[vardef] => Stmt { // int a;
+            kind: StmtKind::LocalVarDef(vardef)
         },
-        ty[ty] Id(name) Assign expr[e] => ast::Stmt { // int a = b + c;
-            kind: ast::StmtKind::LocalVarDef(ast::VarDef { name, ty, value: Some(e) })
+        ty[ty] Id(name) Assign expr[e] => Stmt { // int a = b + c;
+            kind: StmtKind::LocalVarDef(VarDef { name, ty, value: Some(e) })
         },
-        ty[ty] Id(name) Assign atom_expr[e] => ast::Stmt { // int a = b + c;
-            kind: ast::StmtKind::LocalVarDef(ast::VarDef { name, ty, value: Some(e) })
+        ty[ty] Id(name) Assign atom_expr[e] => Stmt { // int a = b + c;
+            kind: StmtKind::LocalVarDef(VarDef { name, ty, value: Some(e) })
         },
-        expr[e] => ast::Stmt {
-            kind: ast::StmtKind::ExprEval(e)
+        expr[e] => Stmt {
+            kind: StmtKind::ExprEval(e)
         },
-        => ast::Stmt {
-            kind: ast::StmtKind::Skip(ast::Skip)
+        => Stmt {
+            kind: StmtKind::Skip(Skip)
         }
     }
 
-    expr: ast::Expr {
+    expr: Expr {
         atom_expr[l] Add atom_expr[r] => mk_bin(l, r, BinOp::Add),
         atom_expr[l] Sub atom_expr[r] => mk_bin(l, r, BinOp::Sub),
         atom_expr[l] Mul atom_expr[r] => mk_bin(l, r, BinOp::Mul),
@@ -254,28 +254,28 @@ parser! {
         BitRev atom_expr[r] => mk_una(r, UnaOp::BitRev)
     }
 
-    atom_expr: ast::Expr {
+    atom_expr: Expr {
         lvalue[e] => e,
-        IntLit(i) => ast::Expr { kind: ast::ExprKind::IntLit(i) },
-        CharLit(i) => ast::Expr { kind: ast::ExprKind::CharLit(i) },
-        StringLit(i) => ast::Expr { kind: ast::ExprKind::StringLit(i) },
+        IntLit(i) => Expr { kind: ExprKind::IntLit(i) },
+        CharLit(i) => Expr { kind: ExprKind::CharLit(i) },
+        StringLit(i) => Expr { kind: ExprKind::StringLit(i) },
         LPar expr[e] RPar => e,
     }
 
-    lvalue: ast::Expr {
-        varsel[sel] => ast::Expr { kind: ast::ExprKind::VarSel(sel) },
-        ptrsel[sel] => ast::Expr { kind: ast::ExprKind::PtrSel(sel) },
+    lvalue: Expr {
+        varsel[sel] => Expr { kind: ExprKind::VarSel(sel) },
+        ptrsel[sel] => Expr { kind: ExprKind::PtrSel(sel) },
     }
 
-    varsel: ast::VarSel {
-        Id(name) => ast::VarSel { name }
+    varsel: VarSel {
+        Id(name) => VarSel { name }
     }
 
-    ptrsel: ast::PtrSel {
-        Mul atom_expr[expr] => ast::PtrSel { expr: Box::new(expr) }, // *a = ...
+    ptrsel: PtrSel {
+        Mul atom_expr[expr] => PtrSel { expr: Box::new(expr) }, // *a = ...
         varsel[sel] LBrk expr[expr] RBrk => { // a[10] = ...
-            let l = ast::Expr { kind: ast::ExprKind::VarSel(sel) };
-            ast::PtrSel {
+            let l = Expr { kind: ExprKind::VarSel(sel) };
+            PtrSel {
                 expr: Box::new(mk_bin(l, expr, BinOp::Add))
             }
         }
@@ -283,14 +283,14 @@ parser! {
 
 }
 
-fn mk_bin(l: ast::Expr, r: ast::Expr, op: BinOp) -> ast::Expr {
-    ast::Expr { kind: ast::ExprKind::Binary(ast::Binary {
+fn mk_bin(l: Expr, r: Expr, op: BinOp) -> Expr {
+    Expr { kind: ExprKind::Binary(Binary {
         op, l: Box::new(l), r: Box::new(r)
     })}
 }
 
-fn mk_una(r: ast::Expr, op: UnaOp) -> ast::Expr {
-    ast::Expr { kind: ast::ExprKind::Unary(ast::Unary {
+fn mk_una(r: Expr, op: UnaOp) -> Expr {
+    Expr { kind: ExprKind::Unary(Unary {
         op, r: Box::new(r)
     })}
 }

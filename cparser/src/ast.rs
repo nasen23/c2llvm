@@ -87,32 +87,32 @@ pub struct Stmt {
 }
 
 pub enum StmtKind {
-    Assign(Assigning),
+    Assign(Assignment),
     LocalVarDef(VarDef),
     ExprEval(Expr),
     Skip(Skip),
 
-    If(If),
-    While(While),
+    If(If_),
+    While(While_),
     DoWhile(DoWhile),
-    For(For),
+    For(For_),
     Return(Option<Expr>),
-    Break(Break),
-    Continue(Continue)
+    Break(Break_),
+    Continue(Continue_)
 }
 
-pub struct Assigning {
+pub struct Assignment {
     pub dst: Expr,
     pub src: Expr
 }
 
-pub struct If {
+pub struct If_ {
     pub cond: Expr,
     pub on_true: Block,
     pub on_false: Option<Block>
 }
 
-pub struct While {
+pub struct While_ {
     pub cond: Expr,
     pub body: Block
 }
@@ -122,7 +122,7 @@ pub struct DoWhile {
     pub body: Block
 }
 
-pub struct For {
+pub struct For_ {
     // on early version of C, 'for (int i = 0;;)' is not supported
     pub init: Box<Stmt>,
     pub cond: Expr,
@@ -133,9 +133,9 @@ pub struct For {
 // dummy stmts
 pub struct Skip;
 
-pub struct Break;
+pub struct Break_;
 
-pub struct Continue;
+pub struct Continue_;
 
 
 impl Display for Program {
