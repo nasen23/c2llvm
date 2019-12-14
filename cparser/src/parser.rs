@@ -42,10 +42,10 @@ parser! {
     }
 
     funcdef: FuncDef {
-        ty[ty] Id(name) LPar vardeflist[defs] RPar block[block] => FuncDef { // int some(int) { ... };
+        ty[ty] Id(name) LPar vardeflist_or_empty[defs] RPar block[block] => FuncDef { // int some(int) { ... };
             name, ret: ty, param: defs, block: Some(block)
         },
-        ty[ty] Id(name) LPar vardeflist[defs] RPar Semi => FuncDef { // int some(int);
+        ty[ty] Id(name) LPar vardeflist_or_empty[defs] RPar Semi => FuncDef { // int some(int);
             name, ret: ty, param: defs, block: None
         }
     }
@@ -87,6 +87,11 @@ parser! {
     value: (String, Option<i32>) {
         Id(name) => (name, None),
         Id(name) Assign IntLit(val) => (name, Some(val))
+    }
+
+    vardeflist_or_empty: Vec<VarDef> {
+        => vec![],
+        vardeflist[list] => list
     }
 
     vardeflist: Vec<VarDef> {
@@ -131,7 +136,7 @@ parser! {
     }
 
     stmts: Vec<Stmt> {
-        => vec![],
+        stmt[s] => vec![s],
         stmts[mut stmts] stmt[s] => {
             stmts.push(s);
             stmts
@@ -139,7 +144,7 @@ parser! {
     }
 
     stmt: Stmt {
-        simple[s] Semi => s,
+        simple[s] => s,
         if_[s] => s,
         while_[s] => s,
         for_[s] => s,
@@ -185,11 +190,11 @@ parser! {
     }
 
     simple: Stmt {
-        vardef[vardef] => Stmt::LocalVarDef(vardef),
-        ty[ty] Id(name) Assign expr[e] => // int a = b + c;
+        vardef[vardef] Semi => Stmt::LocalVarDef(vardef),
+        ty[ty] Id(name) Assign expr[e] Semi => // int a = b + c;
             Stmt::LocalVarDef(VarDef { name, ty, value: Some(e) }),
-        expr[e] => Stmt::ExprEval(e),
-        => Stmt::Skip(Skip)
+        expr[e] Semi => Stmt::ExprEval(e),
+        Semi => Stmt::Skip(Skip)
     }
 
     prim_expr: Expr {
@@ -348,8 +353,7 @@ mod tests {
 
     #[test]
     fn simple_main_function() {
-        let program = parse(Lexer::new(r###"
-        int main() {
+        let program = parse(Lexer::new(r###"int main() {
             int a = 1;
             int b = a + 2;
         }
