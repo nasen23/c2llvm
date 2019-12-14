@@ -42,7 +42,7 @@ pub struct VarDef {
 }
 
 pub enum Expr {
-    VarSel(VarSel),
+    Id(String),
     IntLit(i32),
     CharLit(char),
     StringLit(String),
@@ -52,16 +52,10 @@ pub enum Expr {
     Assign(Assignment)
 }
 
-pub struct VarSel {
-    pub name: String
-}
-
 pub struct Call {
     // should interpret func as varsel
     pub func: Box<Expr>,
     pub arg: Vec<Expr>,
-    pub func_ref: Option<FuncDef>
-
 }
 
 pub struct Unary {
@@ -210,7 +204,7 @@ impl Display for Expr {
         use Expr::*;
 
         match self {
-            VarSel(ref v) => write!(f, "{}", v.name),
+            Id(ref v) => write!(f, "{}", v),
             IntLit(ref i) => write!(f, "{}", i),
             CharLit(ref c) => write!(f, "{}", c),
             StringLit(ref s) => write!(f, "{}", s),

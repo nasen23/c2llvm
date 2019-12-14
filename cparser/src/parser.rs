@@ -185,87 +185,140 @@ parser! {
     }
 
     simple: Stmt {
-        // lvalue[dst] Assign expr[src] => Stmt::Assign(Assignment { dst, src }),
         vardef[vardef] => Stmt::LocalVarDef(vardef),
         ty[ty] Id(name) Assign expr[e] => // int a = b + c;
-            Stmt::LocalVarDef(VarDef { name, ty, value: Some(e) }),
-        ty[ty] Id(name) Assign atom_expr[e] => // int a = b + c;
             Stmt::LocalVarDef(VarDef { name, ty, value: Some(e) }),
         expr[e] => Stmt::ExprEval(e),
         => Stmt::Skip(Skip)
     }
 
-    expr: Expr {
-        atom_expr[l] Add atom_expr[r] => mk_bin(l, r, BinOp::Add),
-        atom_expr[l] Sub atom_expr[r] => mk_bin(l, r, BinOp::Sub),
-        atom_expr[l] Mul atom_expr[r] => mk_bin(l, r, BinOp::Mul),
-        atom_expr[l] Div atom_expr[r] => mk_bin(l, r, BinOp::Div),
-        atom_expr[l] Mod atom_expr[r] => mk_bin(l, r, BinOp::Mod),
-        atom_expr[l] And atom_expr[r] => mk_bin(l, r, BinOp::And),
-        atom_expr[l] Or atom_expr[r] => mk_bin(l, r, BinOp::Or),
-        atom_expr[l] Le atom_expr[r] => mk_bin(l, r, BinOp::Le),
-        atom_expr[l] Lt atom_expr[r] => mk_bin(l, r, BinOp::Lt),
-        atom_expr[l] Ge atom_expr[r] => mk_bin(l, r, BinOp::Ge),
-        atom_expr[l] Gt atom_expr[r] => mk_bin(l, r, BinOp::Gt),
-        atom_expr[l] Eq atom_expr[r] => mk_bin(l, r, BinOp::Eq),
-        atom_expr[l] Ne atom_expr[r] => mk_bin(l, r, BinOp::Ne),
-        atom_expr[l] BitOr atom_expr[r] => mk_bin(l, r, BinOp::BitOr),
-        atom_expr[l] BitAnd atom_expr[r] => mk_bin(l, r, BinOp::BitAnd),
-        atom_expr[l] BitXor atom_expr[r] => mk_bin(l, r, BinOp::BitXor),
-        atom_expr[l] BitLSft atom_expr[r] => mk_bin(l, r, BinOp::BitLSft),
-        atom_expr[l] BitRSft atom_expr[r] => mk_bin(l, r, BinOp::BitRSft),
-        atom_expr[l] Comma atom_expr[r] => mk_bin(l, r, BinOp::Comma),
-
-        expr[l] Add atom_expr[r] => mk_bin(l, r, BinOp::Add),
-        expr[l] Sub atom_expr[r] => mk_bin(l, r, BinOp::Sub),
-        expr[l] Mul atom_expr[r] => mk_bin(l, r, BinOp::Mul),
-        expr[l] Div atom_expr[r] => mk_bin(l, r, BinOp::Div),
-        expr[l] Mod atom_expr[r] => mk_bin(l, r, BinOp::Mod),
-        expr[l] And atom_expr[r] => mk_bin(l, r, BinOp::And),
-        expr[l] Or atom_expr[r] => mk_bin(l, r, BinOp::Or),
-        expr[l] Le atom_expr[r] => mk_bin(l, r, BinOp::Le),
-        expr[l] Lt atom_expr[r] => mk_bin(l, r, BinOp::Lt),
-        expr[l] Ge atom_expr[r] => mk_bin(l, r, BinOp::Ge),
-        expr[l] Gt atom_expr[r] => mk_bin(l, r, BinOp::Gt),
-        expr[l] Eq atom_expr[r] => mk_bin(l, r, BinOp::Eq),
-        expr[l] Ne atom_expr[r] => mk_bin(l, r, BinOp::Ne),
-        expr[l] BitOr atom_expr[r] => mk_bin(l, r, BinOp::BitOr),
-        expr[l] BitAnd atom_expr[r] => mk_bin(l, r, BinOp::BitAnd),
-        expr[l] BitXor atom_expr[r] => mk_bin(l, r, BinOp::BitXor),
-        expr[l] BitLSft atom_expr[r] => mk_bin(l, r, BinOp::BitLSft),
-        expr[l] BitRSft atom_expr[r] => mk_bin(l, r, BinOp::BitRSft),
-        expr[l] Comma atom_expr[r] => mk_bin(l, r, BinOp::Comma),
-
-        Sub atom_expr[r] => mk_una(r, UnaOp::Neg),
-        Not atom_expr[r] => mk_una(r, UnaOp::Not),
-        BitRev atom_expr[r] => mk_una(r, UnaOp::BitRev)
-    }
-
-    atom_expr: Expr {
-        lvalue[e] => e,
+    prim_expr: Expr {
+        Id(name) => Expr::Id(name),
         IntLit(i) => Expr::IntLit(i),
         CharLit(i) => Expr::CharLit(i),
         StringLit(i) => Expr::StringLit(i),
         LPar expr[e] RPar => e,
     }
 
-    lvalue: Expr {
-        varsel[sel] => Expr::VarSel(sel),
-        // ptrsel[sel] => Expr::PtrSel(sel),
+    post_expr: Expr {
+        prim_expr[e] => e,
+        post_expr[l] LBrk expr[r] RBrk => mk_bin(l, r, BinOp::Brks),
+        post_expr[l] LPar RPar => Expr::Call(Call { func: Box::new(l), arg: vec![] }),
+        post_expr[l] LPar arg_expr_list[r] RPar => Expr::Call(Call {
+            func: Box::new(l), arg: r
+        }),
+        post_expr[l] Dot Id(r) => mk_bin(l, Expr::Id(r), BinOp::Dot),
+        post_expr[l] Arrow Id(r) => mk_bin(l, Expr::Id(r), BinOp::Arrow),
+        // TODO: ++ and --
     }
 
-    varsel: VarSel {
-        Id(name) => VarSel { name }
-    }
-
-    ptrsel: PtrSel {
-        Mul atom_expr[expr] => PtrSel { expr: Box::new(expr) }, // *a = ...
-        varsel[sel] LBrk expr[expr] RBrk => { // a[10] = ...
-            let l = Expr::VarSel(sel);
-            PtrSel {
-                expr: Box::new(mk_bin(l, expr, BinOp::Add))
-            }
+    arg_expr_list: Vec<Expr> {
+        assign_expr[e] => vec![e],
+        arg_expr_list[mut l] Comma assign_expr[e] => {
+            l.push(e);
+            l
         }
+    }
+
+    unary_expr: Expr {
+        post_expr[e] => e,
+        // TODO: ++ and --
+        unary_op[op] unary_expr[r] => mk_una(r, op),
+        Sizeof unary_expr[r] => mk_una(r, UnaOp::Sizeof),
+        // TODO: sizeof(type)
+    }
+
+    unary_op: UnaOp {
+        Sub => UnaOp::Neg,
+        Not => UnaOp::Not,
+        BitRev => UnaOp::BitRev,
+        BitAnd => UnaOp::Addr,
+        Mul => UnaOp::Deref,
+    }
+
+    cast_expr: Expr {
+        unary_expr[e] => e,
+        // TODO: (type) expr
+    }
+
+    mul_expr: Expr {
+        cast_expr[e] => e,
+        mul_expr[l] Mul cast_expr[r] => mk_bin(l, r, BinOp::Mul),
+        mul_expr[l] Div cast_expr[r] => mk_bin(l, r, BinOp::Div),
+        mul_expr[l] Mod cast_expr[r] => mk_bin(l, r, BinOp::Mod),
+    }
+
+    add_expr: Expr {
+        mul_expr[e] => e,
+        add_expr[l] Add mul_expr[r] => mk_bin(l, r, BinOp::Add),
+        add_expr[l] Sub mul_expr[r] => mk_bin(l, r, BinOp::Sub),
+    }
+
+    sft_expr: Expr {
+        add_expr[e] => e,
+        sft_expr[l] BitLSft add_expr[r] => mk_bin(l, r, BinOp::BitLSft),
+        sft_expr[l] BitRSft add_expr[r] => mk_bin(l, r, BinOp::BitRSft),
+    }
+
+    rela_expr: Expr {
+        sft_expr[e] => e,
+        rela_expr[l] Lt sft_expr[r] => mk_bin(l, r, BinOp::Lt),
+        rela_expr[l] Gt sft_expr[r] => mk_bin(l, r, BinOp::Gt),
+        rela_expr[l] Le sft_expr[r] => mk_bin(l, r, BinOp::Le),
+        rela_expr[l] Ge sft_expr[r] => mk_bin(l, r, BinOp::Ge),
+    }
+
+    equ_expr: Expr {
+        rela_expr[e] => e,
+        equ_expr[l] Eq rela_expr[r] => mk_bin(l, r, BinOp::Eq),
+        equ_expr[l] Ne rela_expr[r] => mk_bin(l, r, BinOp::Ne),
+    }
+
+    bitand_expr: Expr {
+        equ_expr[e] => e,
+        bitand_expr[l] BitAnd equ_expr[r] => mk_bin(l, r, BinOp::BitAnd),
+    }
+
+    xor_expr: Expr {
+        bitand_expr[e] => e,
+        xor_expr[l] BitXor bitand_expr[r] => mk_bin(l, r, BinOp::BitXor),
+    }
+
+    bitor_expr: Expr {
+        xor_expr[e] => e,
+        bitor_expr[l] BitOr xor_expr[r] => mk_bin(l, r, BinOp::BitOr),
+    }
+
+    and_expr: Expr {
+        bitor_expr[e] => e,
+        and_expr[l] And bitor_expr[r] => mk_bin(l, r, BinOp::And),
+    }
+
+    or_expr: Expr {
+        and_expr[e] => e,
+        or_expr[l] Or and_expr[r] => mk_bin(l, r, BinOp::Or),
+    }
+
+    cond_expr: Expr {
+        or_expr[e] => e,
+        // TODO: a ? b : c
+    }
+
+    assign_expr: Expr {
+        cond_expr[e] => e,
+        unary_expr[dst] Assign assign_expr[src] => Expr::Assign(Assignment {
+            dst: Box::new(dst), src: Box::new(src)
+        }),
+        // TODO: += -= *= ...
+    }
+
+    expr: Expr {
+        assign_expr[e] => e,
+        expr[l] Comma assign_expr[r] => mk_bin(l, r, BinOp::Comma)
+    }
+
+    const_expr: Expr {
+        cond_expr[e] => e,
     }
 
 }

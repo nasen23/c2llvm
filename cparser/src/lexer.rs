@@ -10,6 +10,7 @@ pub enum Token {
     Short,
     Int,
     Long,
+    Signed,
     Unsigned,
 
     Float,
@@ -29,6 +30,8 @@ pub enum Token {
     Break,
     Continue,
     Extern,
+
+    Sizeof,
 
     Le,
     Ge,
@@ -110,6 +113,8 @@ lexer! {
     r#"break"# => Token::Break,
     r#"continue"# => Token::Continue,
     r#"extern"# => Token::Extern,
+
+    r#"sizeof"# => Token::Sizeof,
 
     r#"<="# => Token::Le,
     r#">="# => Token::Ge,
