@@ -182,11 +182,11 @@ parser! {
     }
 
     break_: Stmt {
-        Break Semi => Stmt::Break(Break_)
+        Break Semi => Stmt::Break
     }
 
     continue_: Stmt {
-        Continue Semi => Stmt::Continue(Continue_)
+        Continue Semi => Stmt::Continue
     }
 
     simple: Stmt {
@@ -194,7 +194,7 @@ parser! {
         ty[ty] Id(name) Assign expr[e] Semi => // int a = b + c;
             Stmt::LocalVarDef(VarDef { name, ty, value: Some(e) }),
         expr[e] Semi => Stmt::ExprEval(e),
-        Semi => Stmt::Skip(Skip)
+        Semi => Stmt::Skip
     }
 
     prim_expr: Expr {

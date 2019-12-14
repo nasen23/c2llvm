@@ -77,15 +77,15 @@ pub struct Assignment {
 pub enum Stmt {
     LocalVarDef(VarDef),
     ExprEval(Expr),
-    Skip(Skip),
+    Skip,
 
     If(If_),
     While(While_),
     DoWhile(DoWhile),
     For(For_),
     Return(Option<Expr>),
-    Break(Break_),
-    Continue(Continue_)
+    Break,
+    Continue
 }
 
 pub struct If_ {
@@ -111,14 +111,6 @@ pub struct For_ {
     pub update: Box<Stmt>,
     pub body: Block
 }
-
-// dummy stmts
-pub struct Skip;
-
-pub struct Break_;
-
-pub struct Continue_;
-
 
 impl Display for Program {
     fn fmt(&self, f: &mut Formatter) -> Result {
@@ -192,8 +184,8 @@ impl Display for Stmt {
                               if let Some(ref b) = if_.on_false { format!(" else {}", b) } else { "".to_owned() }),
             While(ref w) => write!(f, "while {} {}", w.cond, w.body),
             For(ref f_) => write!(f, "for {};{};{} {}", f_.init, f_.cond, f_.update, f_.body),
-            Break(_) => write!(f, "break"),
-            Continue(_) => write!(f, "continue"),
+            Break => write!(f, "break"),
+            Continue => write!(f, "continue"),
             _ => Ok(())
         }
     }
