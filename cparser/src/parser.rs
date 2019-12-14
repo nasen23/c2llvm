@@ -77,7 +77,6 @@ parser! {
     }
 
     valuelist: Vec<(String, Option<i32>)> {
-        => vec![],
         value[val] => vec![val],
         valuelist[mut list] Comma value[val] => {
             list.push(val);
@@ -91,7 +90,6 @@ parser! {
     }
 
     vardeflist: Vec<VarDef> {
-        => vec![],
         vardef[decl] => vec![decl], // (int a)
         vardeflist[mut decls] Comma vardef[decl] => { // (int a, int b)
             decls.push(decl);
@@ -100,7 +98,6 @@ parser! {
     }
 
     vardefs: Vec<VarDef> {
-        => vec![],
         vardef[decl] => vec![decl],
         vardefs[mut decls] Semi vardef[decl] => { // int a; int b (used in struct)
             decls.push(decl);
@@ -143,18 +140,18 @@ parser! {
 
     stmt: Stmt {
         simple[s] Semi => s,
-        if_[kind] => Stmt { kind },
-        while_[kind] => Stmt { kind },
-        for_[kind] => Stmt { kind },
-        return_[kind] => Stmt { kind },
-        break_[kind] => Stmt { kind },
-        continue_[kind] => Stmt { kind },
+        if_[s] => s,
+        while_[s] => s,
+        for_[s] => s,
+        return_[s] => s,
+        break_[s] => s,
+        continue_[s] => s,
     }
 
-    if_: StmtKind {
+    if_: Stmt {
         // if (cond) on_true else on_false
         If LPar expr[cond] RPar block[on_true] else_[on_false] =>
-            StmtKind::If(If_ { cond, on_true, on_false })
+            Stmt::If(If_ { cond, on_true, on_false })
     }
 
     else_: Option<Block> {
@@ -162,50 +159,40 @@ parser! {
         Else block[b] => Some(b)
     }
 
-    while_: StmtKind {
+    while_: Stmt {
         // while (cond) body
         While LPar expr[cond] RPar block[body] =>
-            StmtKind::While(While_ { cond, body })
+            Stmt::While(While_ { cond, body })
     }
 
-    for_: StmtKind {
+    for_: Stmt {
         // for (init;cond;update) body
         For LPar simple[init] Semi expr[cond] Semi simple[update] RPar block[body] =>
-            StmtKind::For(For_ { init: Box::new(init), cond, update: Box::new(update), body })
+            Stmt::For(For_ { init: Box::new(init), cond, update: Box::new(update), body })
     }
 
-    return_: StmtKind {
-        Return Semi => StmtKind::Return(None),
-        Return expr[e] Semi => StmtKind::Return(Some(e))
+    return_: Stmt {
+        Return Semi => Stmt::Return(None),
+        Return expr[e] Semi => Stmt::Return(Some(e))
     }
 
-    break_: StmtKind {
-        Break Semi => StmtKind::Break(Break_)
+    break_: Stmt {
+        Break Semi => Stmt::Break(Break_)
     }
 
-    continue_: StmtKind {
-        Continue Semi => StmtKind::Continue(Continue_)
+    continue_: Stmt {
+        Continue Semi => Stmt::Continue(Continue_)
     }
 
     simple: Stmt {
-        lvalue[dst] Assign expr[src] => Stmt { //  a = a + b
-            kind: StmtKind::Assign(Assignment { dst, src })
-        },
-        vardef[vardef] => Stmt { // int a;
-            kind: StmtKind::LocalVarDef(vardef)
-        },
-        ty[ty] Id(name) Assign expr[e] => Stmt { // int a = b + c;
-            kind: StmtKind::LocalVarDef(VarDef { name, ty, value: Some(e) })
-        },
-        ty[ty] Id(name) Assign atom_expr[e] => Stmt { // int a = b + c;
-            kind: StmtKind::LocalVarDef(VarDef { name, ty, value: Some(e) })
-        },
-        expr[e] => Stmt {
-            kind: StmtKind::ExprEval(e)
-        },
-        => Stmt {
-            kind: StmtKind::Skip(Skip)
-        }
+        lvalue[dst] Assign expr[src] => Stmt::Assign(Assignment { dst, src }),
+        vardef[vardef] => Stmt::LocalVarDef(vardef),
+        ty[ty] Id(name) Assign expr[e] => // int a = b + c;
+            Stmt::LocalVarDef(VarDef { name, ty, value: Some(e) }),
+        ty[ty] Id(name) Assign atom_expr[e] => // int a = b + c;
+            Stmt::LocalVarDef(VarDef { name, ty, value: Some(e) }),
+        expr[e] => Stmt::ExprEval(e),
+        => Stmt::Skip(Skip)
     }
 
     expr: Expr {
@@ -256,15 +243,15 @@ parser! {
 
     atom_expr: Expr {
         lvalue[e] => e,
-        IntLit(i) => Expr { kind: ExprKind::IntLit(i) },
-        CharLit(i) => Expr { kind: ExprKind::CharLit(i) },
-        StringLit(i) => Expr { kind: ExprKind::StringLit(i) },
+        IntLit(i) => Expr::IntLit(i),
+        CharLit(i) => Expr::CharLit(i),
+        StringLit(i) => Expr::StringLit(i),
         LPar expr[e] RPar => e,
     }
 
     lvalue: Expr {
-        varsel[sel] => Expr { kind: ExprKind::VarSel(sel) },
-        ptrsel[sel] => Expr { kind: ExprKind::PtrSel(sel) },
+        varsel[sel] => Expr::VarSel(sel),
+        ptrsel[sel] => Expr::PtrSel(sel),
     }
 
     varsel: VarSel {
@@ -274,7 +261,7 @@ parser! {
     ptrsel: PtrSel {
         Mul atom_expr[expr] => PtrSel { expr: Box::new(expr) }, // *a = ...
         varsel[sel] LBrk expr[expr] RBrk => { // a[10] = ...
-            let l = Expr { kind: ExprKind::VarSel(sel) };
+            let l = Expr::VarSel(sel);
             PtrSel {
                 expr: Box::new(mk_bin(l, expr, BinOp::Add))
             }
@@ -284,15 +271,15 @@ parser! {
 }
 
 fn mk_bin(l: Expr, r: Expr, op: BinOp) -> Expr {
-    Expr { kind: ExprKind::Binary(Binary {
+    Expr::Binary(Binary {
         op, l: Box::new(l), r: Box::new(r)
-    })}
+    })
 }
 
 fn mk_una(r: Expr, op: UnaOp) -> Expr {
-    Expr { kind: ExprKind::Unary(Unary {
+    Expr::Unary(Unary {
         op, r: Box::new(r)
-    })}
+    })
 }
 
 #[cfg(test)]

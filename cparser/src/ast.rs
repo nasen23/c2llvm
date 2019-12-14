@@ -41,11 +41,7 @@ pub struct VarDef {
     pub value: Option<Expr>,
 }
 
-pub struct Expr {
-    pub kind: ExprKind
-}
-
-pub enum ExprKind {
+pub enum Expr {
     VarSel(VarSel),
     PtrSel(PtrSel),
     IntLit(i32),
@@ -82,11 +78,7 @@ pub struct Binary {
     pub r: Box<Expr>
 }
 
-pub struct Stmt {
-    pub kind: StmtKind
-}
-
-pub enum StmtKind {
+pub enum Stmt {
     Assign(Assignment),
     LocalVarDef(VarDef),
     ExprEval(Expr),
@@ -201,9 +193,9 @@ impl Display for Block {
 
 impl Display for Stmt {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        use StmtKind::*;
+        use Stmt::*;
 
-        match self.kind {
+        match self {
             Assign(ref a) => write!(f, "{} := {}", a.dst, a.src),
             LocalVarDef(ref d) => write!(f, "{}", d),
             ExprEval(ref e) => write!(f, "{}", e),
@@ -220,9 +212,9 @@ impl Display for Stmt {
 
 impl Display for Expr {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        use ExprKind::*;
+        use Expr::*;
 
-        match self.kind {
+        match self {
             VarSel(ref v) => write!(f, "{}", v.name),
             PtrSel(ref p) => write!(f, "*({})", p.expr),
             IntLit(ref i) => write!(f, "{}", i),
