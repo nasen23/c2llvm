@@ -538,6 +538,7 @@ name = "llvmgen"
 version = "0.1.0"
 dependencies = [
  "cparser 0.1.0",
+ "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "inkwell 0.1.0 (git+https://github.com/TheDan64/inkwell?branch=llvm8-0)",
 ]
 
