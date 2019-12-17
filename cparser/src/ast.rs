@@ -41,6 +41,7 @@ pub struct VarDef {
     pub value: Option<Expr>,
 }
 
+// TODO: cond_expr(a ? b : c) inc/dec_expr(++i, i--)
 pub enum Expr {
     Id(String),
     IntLit(i32),
@@ -199,7 +200,7 @@ impl Display for Expr {
         match self {
             Id(ref v) => write!(f, "{}", v),
             IntLit(ref i) => write!(f, "{}", i),
-            FloatLit(ref f) => write!(f, "{}", i),
+            FloatLit(ref f_) => write!(f, "{}", f_),
             CharLit(ref c) => write!(f, "{}", c),
             StringLit(ref s) => write!(f, "{}", s),
             Call(ref c) => write!(f, "{}", c.func),
