@@ -44,6 +44,7 @@ pub struct VarDef {
 pub enum Expr {
     Id(String),
     IntLit(i32),
+    FloatLit(f64),
     CharLit(char),
     StringLit(String),
     Call(Call),
@@ -198,6 +199,7 @@ impl Display for Expr {
         match self {
             Id(ref v) => write!(f, "{}", v),
             IntLit(ref i) => write!(f, "{}", i),
+            FloatLit(ref f) => write!(f, "{}", i),
             CharLit(ref c) => write!(f, "{}", c),
             StringLit(ref s) => write!(f, "{}", s),
             Call(ref c) => write!(f, "{}", c.func),
