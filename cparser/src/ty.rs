@@ -70,8 +70,6 @@ pub enum Qualifier {
     Volatile,
 }
 
-use Sign::*;
-
 impl Ty {
     pub fn new(kind: TyKind) -> Ty {
         Ty { kind, stor: StorClass::None, quals: vec![] }
