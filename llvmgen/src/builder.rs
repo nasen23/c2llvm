@@ -1,8 +1,9 @@
 use cparser::ast::*;
+use cparser::ty::*;
 use failure::{Error, Fail};
 
 use crate::context::Compiler;
-use crate::value::Value;
+use crate::value::{Type, Value};
 
 pub type IRResult<'a> = Result<Value<'a>, BuildError>;
 
@@ -24,6 +25,99 @@ pub enum BuildError {
     VarRedef { name: String },
     #[fail(display = "use of undeclared identifier '{}'", name)]
     UnknownIdent { name: String },
+    #[fail(display = "array size missing in '{}'", name)]
+    MissingArraySize { name: String },
+    #[fail(display = "nothing")]
+    Nothing,
+}
+
+impl IRBuilder for Program {
+    fn codegen<'a>(self, compiler: &'a mut Compiler) -> IRResult<'a> {
+        use Decl::*;
+        for decl in self.decl {
+            match decl {
+                TypeDef(typedef) => typedef.codegen(compiler)?,
+                VarDef(vardef) => vardef.codegen(compiler)?,
+                FuncDef(funcdef) => funcdef.codegen(compiler)?,
+                StructDef(struct_) => struct_.codegen(compiler)?,
+                EnumDef(enum_) => enum_.codegen(compiler)?,
+            };
+        }
+
+        Ok(Value::Nil)
+    }
+}
+
+impl IRBuilder for TypeDef {
+    fn codegen<'a>(self, compiler: &'a mut Compiler) -> IRResult<'a> {
+        Ok(Value::Nil)
+    }
+}
+
+impl IRBuilder for VarDef {
+    fn codegen<'a>(self, compiler: &'a mut Compiler) -> IRResult<'a> {
+        Ok(Value::Nil)
+    }
+}
+
+impl IRBuilder for FuncDef {
+    fn codegen<'a>(self, compiler: &'a mut Compiler) -> IRResult<'a> {
+        Ok(Value::Nil)
+    }
+}
+
+impl IRBuilder for Struct {
+    fn codegen<'a>(self, compiler: &'a mut Compiler) -> IRResult<'a> {
+        Ok(Value::Nil)
+    }
+}
+
+impl IRBuilder for Enum {
+    fn codegen<'a>(self, compiler: &'a mut Compiler) -> IRResult<'a> {
+        Ok(Value::Nil)
+    }
+}
+
+impl IRBuilder for Ty {
+    fn codegen<'a>(self, compiler: &'a mut Compiler) -> IRBuilder<'a> {
+        Ok(Value::Nil)
+    }
+}
+
+impl IRBuilder for TyKind {
+    fn codegen<'a>(self, compiler: &'a mut Compiler) -> IRResult<'a> {
+        use Value::*;
+
+        match self {
+            TyKind::Void => Ok(VoidT(compiler.context.void_type())),
+            TyKind::Int(signed) => Ok(IntT(compiler.context.i32_type())),
+            TyKind::Short(signed) => Ok(IntT(compiler.context.i16_type())),
+            TyKind::Long(signed) => Ok(IntT(compiler.context.i64_type())),
+            TyKind::LLong(signed) => Ok(IntT(compiler.context.i128_type())),
+            TyKind::Float => Ok(FloatT(compiler.context.f32_type())),
+            TyKind::Double => Ok(FloatT(compiler.context.f64_type())),
+            TyKind::Array(array) => {
+                if let Some(len) = array.len {
+                    array
+                        .tyk
+                        .codegen(compiler)?
+                        .into_arraytype(len)
+                        .ok_or(BuildError::Nothing)
+                } else {
+                    Err(BuildError::MissingArraySize {
+                        name: String::new(),
+                    })
+                }
+            }
+            TyKind::Struct(struct_) => {
+                let types = vec![];
+                for mem in struct_.mem {
+                    types.push(mem.ty.codegen(compiler)?);
+                }
+                Ok(StructT(compiler.context.struct_type(&types[..], false)))
+            },
+        }
+    }
 }
 
 impl IRBuilder for Expr {

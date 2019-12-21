@@ -7,24 +7,20 @@ pub enum TyKind {
     // incomplete type 'void' could not be directly used
     // It is either function return type or behind a pointer
     Void,
-    Char(Sign),
-    Short(Sign),
-    Int(Sign),
-    Long(Sign),
-    LLong(Sign),
+    Char(bool),
+    Short(bool),
+    Int(bool),
+    Long(bool),
+
+
+    LLong(bool),
     Float,
     Double,
     Array(Array),
-    Func(Func),
     Pointer(Pointer),
     Struct(Struct),
     Union(Union),
     Enum(Enum),
-}
-
-pub enum Sign {
-    Signed,
-    Unsigned
 }
 
 pub struct Array {
@@ -52,12 +48,6 @@ pub struct Union {
 pub struct Enum {
     pub name: Option<String>,
     pub mem: Vec<(String, Option<i32>)>,
-}
-
-pub struct Func {
-    pub ret: Box<TyKind>,
-    pub param: Vec<TyKind>,
-    pub args: bool
 }
 
 pub struct Ty {
@@ -88,8 +78,8 @@ impl Ty {
     }
 
     pub fn void() -> Ty { Ty::new(TyKind::Void) }
-    pub fn char() -> Ty { Ty::new(TyKind::Char(Signed)) }
-    pub fn int() -> Ty { Ty::new(TyKind::Int(Signed)) }
+    pub fn char() -> Ty { Ty::new(TyKind::Char(true)) }
+    pub fn int() -> Ty { Ty::new(TyKind::Int(true)) }
     pub fn float() -> Ty { Ty::new(TyKind::Float) }
     pub fn double() -> Ty { Ty::new(TyKind::Double) }
     pub fn array(kind: TyKind, len: Option<u32>) -> Ty {
