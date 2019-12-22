@@ -108,9 +108,9 @@ pub struct DoWhile {
 
 pub struct For_ {
     // on early version of C, 'for (int i = 0;;)' is not supported
-    pub init: Box<Stmt>,
+    pub init: Option<Expr>,
     pub cond: Expr,
-    pub update: Box<Stmt>,
+    pub update: Option<Expr>,
     pub body: Block,
 }
 
@@ -119,7 +119,7 @@ impl Display for Program {
         let decls = &self.decl;
 
         for decl in decls.iter() {
-            write!(f, "{}\n", decl);
+            write!(f, "{}\n", decl)?;
         }
 
         write!(f, "")
@@ -212,7 +212,7 @@ impl Display for Stmt {
                 }
             ),
             While(ref w) => write!(f, "while {} {}", w.cond, w.body),
-            For(ref f_) => write!(f, "for {};{};{} {}", f_.init, f_.cond, f_.update, f_.body),
+            For(ref f_) => write!(f, "for {}", f_.body),
             Break => write!(f, "break"),
             Continue => write!(f, "continue"),
             _ => Ok(()),

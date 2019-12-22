@@ -32,6 +32,8 @@ pub enum BuildError {
     TypeCast,
     #[fail(display = "taking address of rvalue")]
     AddrRValue,
+    #[fail(display = "assigning expression to rvalue")]
+    AssignToRValue,
     #[fail(display = "using expression as function is unsupported")]
     ExprAsFunc,
     #[fail(display = "not inside a function")]
@@ -316,7 +318,8 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let rhs_cast = llvm.cast_into(rhs, LLVMInt32Type());
                     let zero = llvm.zero();
                     // function argument should use an indice like [index] here
-                    Ok(llvm.build_gep(lhs, &mut [zero, rhs]))
+                    let ptr = llvm.build_gep(lhs, &mut [zero, rhs]);
+                    Ok(llvm.build_load(ptr))
                 },
                 Dot => unsafe {
                     let lhs = compile_pointer_expr(*binary.l, llvm)?;
@@ -342,7 +345,8 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
         Assign(assign) => unsafe {
             let lhs = compile_pointer_expr(*assign.dst, llvm)?;
             let rhs = compile_expr(*assign.src, llvm)?;
-            let rhs = llvm.cast_into(rhs, LLVMGetElementType(LLVMTypeOf(lhs))).ok_or(BuildError::TypeCast)?;
+            let element_type = LLVMGetElementType(LLVMTypeOf(lhs));
+            let rhs = llvm.cast_into(rhs, element_type).ok_or(BuildError::TypeCast)?;
             Ok(llvm.build_store(rhs, lhs))
         }
     }
@@ -356,7 +360,17 @@ pub fn compile_pointer_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
             Some(var) => Ok(*var),
             None => Err(BuildError::UnknownIdent { name }),
         },
-        _ => unimplemented!()
+        Binary(binary) if binary.op == BinOp::Brks => {
+            let lhs = compile_pointer_expr(*binary.l, llvm)?;
+            let rhs = compile_expr(*binary.r, llvm)?;
+            let zero = llvm.zero();
+            // function argument should use an indice like [rhs] here
+            Ok(llvm.build_gep(lhs, &mut [zero, rhs]))
+        },
+        Unary(unary) if unary.op == UnaOp::Deref => {
+            compile_expr(*unary.r, llvm)
+        }
+        _ => Err(BuildError::AddrRValue)
     }
 }
 
@@ -421,6 +435,17 @@ pub fn compile_stmt(stmt: Stmt, llvm: &mut LLVM) -> IRResult<()> {
                 Ok(())
             },
             While(while_) => {
+                let func = if let Some(func) = llvm.cur_func {
+                    func
+                } else {
+                    return Err(BuildError::NotInFunc);
+                };
+
+                let cond_block = llvm.add_block(func, "cond");
+                let loop_ = llvm.add_block(func, "loop");
+                let end = llvm.add_block(func, "end");
+
+                llvm.pos_builder_at_end(cond_block);
                 let cond = compile_expr(while_.cond, llvm)?;
                 let tmp;
                 if llvm.is_int(LLVMTypeOf(cond)) {
@@ -429,14 +454,10 @@ pub fn compile_stmt(stmt: Stmt, llvm: &mut LLVM) -> IRResult<()> {
                     tmp = llvm.build_fcmp("!=", cond, llvm.zero());
                 }
 
-                let func = unimplemented!();
                 // Generate condition block
-                let cond_block = llvm.add_block(func, "cond");
                 // Add a new branch
-                llvm.br(cond_block);
 
-                let loop_ = llvm.add_block(func, "loop");
-                let end = llvm.add_block(func, "end");
+                llvm.br(cond_block);
                 let result = llvm.condbr(tmp, loop_, end);
 
                 llvm.break_block = Some(end);
@@ -445,11 +466,11 @@ pub fn compile_stmt(stmt: Stmt, llvm: &mut LLVM) -> IRResult<()> {
                 // Add loop block to the end
                 llvm.pos_builder_at_end(loop_);
                 for stmt in while_.body.stmts {
-                    compile_stmt(stmt, llvm);
+                    compile_stmt(stmt, llvm)?;
                 }
 
                 llvm.br(cond_block);
-                llvm.pos_builder_at_end(cond_block);
+                llvm.pos_builder_at_end(end);
 
                 llvm.break_block = None;
                 llvm.cont_block = None;
@@ -459,7 +480,58 @@ pub fn compile_stmt(stmt: Stmt, llvm: &mut LLVM) -> IRResult<()> {
                 unimplemented!();
             },
             For(for_) => {
-                unimplemented!();
+                let func = if let Some(func) = llvm.cur_func {
+                    func
+                } else {
+                    return Err(BuildError::NotInFunc);
+                };
+
+                let init = llvm.add_block(func, "init");
+                let cond_block = llvm.add_block(func, "cond");
+                let loop_ = llvm.add_block(func, "loop");
+                let update = llvm.add_block(func, "update");
+                let end = llvm.add_block(func, "end");
+
+                llvm.pos_builder_at_end(init);
+                if let Some(init_expr) = for_.init {
+                    compile_expr(init_expr, llvm)?;
+                }
+
+                llvm.pos_builder_at_end(cond_block);
+                let cond = compile_expr(for_.cond, llvm)?;
+                let tmp;
+                if llvm.is_int(LLVMTypeOf(cond)) {
+                    tmp = llvm.build_icmp_signed("!=", cond, llvm.zero());
+                } else {
+                    tmp = llvm.build_fcmp("!=", cond, llvm.zero());
+                }
+
+                // Generate condition block
+                // Add a new branch
+
+                llvm.br(cond_block);
+                let result = llvm.condbr(tmp, loop_, end);
+
+                llvm.break_block = Some(end);
+                llvm.cont_block = Some(cond_block);
+
+                // Add loop block to the end
+                llvm.pos_builder_at_end(loop_);
+                for stmt in for_.body.stmts {
+                    compile_stmt(stmt, llvm)?;
+                }
+
+                llvm.pos_builder_at_end(update);
+                if let Some(update_expr) = for_.update {
+                    compile_expr(update_expr, llvm)?;
+                }
+
+                llvm.br(cond_block);
+                llvm.pos_builder_at_end(end);
+
+                llvm.break_block = None;
+                llvm.cont_block = None;
+                Ok(())
             },
             Return(ret) => {
                 if let Some(expr) = ret {
@@ -583,13 +655,45 @@ mod tests {
     }
 
     #[test]
+    fn test_while_loop() {
+        let program = parse(Lexer::new("
+        int main() {\n\
+            int a = 1;\n\
+            while (a == 1) {\n\
+                return a;\n\
+            }\n\
+            return 0;\n\
+        }")).unwrap();
+        let mut llvm = LLVM::new();
+        compile_program(program, &mut llvm).expect("shouldn't fail");
+        let result = llvm.print_to_string();
+        println!("{}", result);
+        assert_eq!(result, "fe")
+    }
+
+    #[test]
+    fn test_for_loop() {
+        let program = parse(Lexer::new("
+        int main() {\n\
+            int a;\n\
+            for (a = 1; a < 10; a = a + 1) {\n\
+                return a;\n\
+            }\n\
+            return 0;\n\
+        }")).unwrap();
+        let mut llvm = LLVM::new();
+        compile_program(program, &mut llvm).expect("shouldn't fail");
+        let result = llvm.print_to_string();
+        println!("{}", result);
+        assert_eq!(result, "fe")
+    }
+
+    #[test]
     fn test_char_pointer() {
         let program = parse(Lexer::new("
         int main() {\n\
-            char a[100];\n\
-            if (a[1] == 'o') {\n\
-                 return a[1];\n\
-            }\n\
+            char a[10];\n\
+            a[1] = 1;
             return 0;\n\
         }")).unwrap();
         let mut llvm = LLVM::new();

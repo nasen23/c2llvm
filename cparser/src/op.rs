@@ -1,3 +1,4 @@
+#[derive(PartialEq)]
 pub enum BinOp {
     Add,
     Sub,
@@ -23,6 +24,7 @@ pub enum BinOp {
     Arrow,
 }
 
+#[derive(PartialEq)]
 pub enum UnaOp {
     Neg,
     Not,

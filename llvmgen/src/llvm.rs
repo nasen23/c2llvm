@@ -343,6 +343,12 @@ impl LLVM {
 
     pub fn same_type(&self, type1: LLVMTypeRef, type2: LLVMTypeRef) -> bool {
         unsafe {
+            if self.is_int(type1) && self.is_int(type2) {
+                let width1 = LLVMGetIntTypeWidth(type1);
+                let width2 = LLVMGetIntTypeWidth(type2);
+
+                return width1 == width2;
+            }
             let kind1 = LLVMGetTypeKind(type1);
             let kind2 = LLVMGetTypeKind(type2);
 
