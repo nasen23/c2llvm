@@ -549,8 +549,10 @@ pub fn compile_stmt(stmt: Stmt, llvm: &mut LLVM) -> IRResult<()> {
 
                 // Add loop block to the end
                 llvm.pos_builder_at_end(loop_);
-                for stmt in for_.body.stmts {
-                    compile_stmt(stmt, llvm)?;
+                if let Some(block) = for_.body {
+                    for stmt in block.stmts {
+                        compile_stmt(stmt, llvm)?;
+                    }
                 }
 
                 llvm.pos_builder_at_end(update);

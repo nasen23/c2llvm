@@ -207,7 +207,9 @@ parser! {
     for_: Stmt {
         // for (init;cond;update) body
         For LPar expr[init] Semi expr[cond] Semi expr[update] RPar block[body] =>
-            Stmt::For(For_ { init: Some(init), cond: cond, update: Some(update), body })
+            Stmt::For(For_ { init: Some(init), cond: cond, update: Some(update), body: Some(body) }),
+        For LPar expr[init] Semi expr[cond] Semi expr[update] RPar Semi =>
+            Stmt::For(For_ { init: Some(init), cond: cond, update: Some(update), body: None })
     }
 
     return_: Stmt {

@@ -112,7 +112,7 @@ pub struct For_ {
     pub init: Option<Expr>,
     pub cond: Expr,
     pub update: Option<Expr>,
-    pub body: Block,
+    pub body: Option<Block>,
 }
 
 impl Display for Program {
@@ -213,7 +213,7 @@ impl Display for Stmt {
                 }
             ),
             While(ref w) => write!(f, "while {} {}", w.cond, w.body),
-            For(ref f_) => write!(f, "for {}", f_.body),
+            For(ref f_) => write!(f, "for"),
             Break => write!(f, "break"),
             Continue => write!(f, "continue"),
             _ => Ok(()),
