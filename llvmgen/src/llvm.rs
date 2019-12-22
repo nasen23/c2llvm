@@ -12,6 +12,7 @@ pub struct LLVM {
     pub builder: LLVMBuilderRef,
     pub module: LLVMModuleRef,
     pub named_values: HashMap<String, LLVMValueRef>,
+    pub funcs: HashMap<String, LLVMValueRef>,
     pub cont_block: Option<LLVMBasicBlockRef>,
     pub break_block: Option<LLVMBasicBlockRef>,
     pub cur_func: Option<LLVMValueRef>
@@ -30,6 +31,7 @@ impl LLVM {
                 builder,
                 module,
                 named_values: HashMap::new(),
+                funcs: HashMap::new(),
                 cont_block,
                 break_block,
                 cur_func: None
@@ -59,6 +61,14 @@ impl LLVM {
 
     pub fn get_var(&self, name: &str) -> Option<&LLVMValueRef> {
         self.named_values.get(name)
+    }
+
+    pub fn get_func(&self, name: &str) -> Option<&LLVMValueRef> {
+        self.funcs.get(name)
+    }
+
+    pub fn set_func(&mut self, name: &str, value: LLVMValueRef) {
+        self.funcs.insert(name.to_owned(), value);
     }
 
     pub fn llvm_ty(&self, tyk: &TyKind) -> LLVMTypeRef {

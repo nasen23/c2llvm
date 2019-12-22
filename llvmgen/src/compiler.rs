@@ -614,19 +614,26 @@ pub fn compile_decl(decl: Decl, llvm: &mut LLVM) -> IRResult<()> {
                     .map(|def| llvm.llvm_ty(&def.ty.kind))
                     .collect();
 
-                let func = llvm.add_func(name, arg_types.as_mut_slice(), ret, funcdef.var_arg);
-                llvm.cur_func = Some(func);
-                let block = llvm.add_block(func, "entry");
-                llvm.pos_builder_at_end(block);
-                for (i, a) in funcdef.param.iter().enumerate() {
-                    let arg = llvm.get_param(func, i as u32);
-                    let ptr = llvm.alloca(arg_types[i]);
-                    llvm.build_store(arg, ptr);
-                    llvm.set_var(&a.name, ptr);
-                }
-                llvm.set_var(name, func);
-                if let Some(block) = funcdef.block {
-                    for stmt in block.stmts {
+                let func = if let Some(func) = llvm.get_func(name) {
+                    *func
+                } else {
+                    let val = llvm.add_func(name, arg_types.as_mut_slice(), ret, funcdef.var_arg);
+                    llvm.set_func(name, val);
+                    val
+                };
+
+                if let Some(body) = funcdef.block {
+                    llvm.cur_func = Some(func);
+                    let block = llvm.add_block(func, "entry");
+                    llvm.pos_builder_at_end(block);
+                    for (i, a) in funcdef.param.iter().enumerate() {
+                        let arg = llvm.get_param(func, i as u32);
+                        let ptr = llvm.alloca(arg_types[i]);
+                        llvm.build_store(arg, ptr);
+                        llvm.set_var(&a.name, ptr);
+                    }
+                    llvm.set_var(name, func);
+                    for stmt in body.stmts {
                         compile_stmt(stmt, llvm)?;
                     }
                 }
@@ -748,6 +755,22 @@ mod tests {
             char a[10];\n\
             a[1] = 1;
             return func();\n\
+        }")).unwrap();
+        let mut llvm = LLVM::new();
+        compile_program(program, &mut llvm).expect("shouldn't fail");
+        let result = llvm.print_to_string();
+        println!("{}", result);
+        assert_eq!(result, "fe")
+    }
+
+    #[test]
+    fn test_func_decl() {
+        let program = parse(Lexer::new("
+        int nice(char a);\n\
+        int nice(char a) { return 0; }\n\
+        int main() {\n\
+            char a[10];\n\
+            return nice(1);\n\
         }")).unwrap();
         let mut llvm = LLVM::new();
         compile_program(program, &mut llvm).expect("shouldn't fail");
