@@ -84,7 +84,7 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let expr = compile_expr(arg, llvm)?;
                     args_llvm.push(expr);
                 }
-                let n_args = unsafe { LLVMCountParams(callee) };
+                let n_args = unsafe { LLVMCountParams(*callee) };
                 if n_args as usize != args_llvm.len() {
                     return Err(BuildError::ArgumentCount { name });
                 }
@@ -92,7 +92,7 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                 unsafe {
                     Ok(LLVMBuildCall(
                         llvm.builder,
-                        callee,
+                        *callee,
                         args_llvm.as_mut_ptr(),
                         n_args,
                         name.as_ptr(),
@@ -774,7 +774,7 @@ mod tests {
         int nice(char a) { return 0; }\n\
         int main() {\n\
             char a[10];\n\
-            return nice(1);\n\
+            return fewjoj(1);\n\
         }")).unwrap();
         let mut llvm = LLVM::new();
         compile_program(program, &mut llvm).expect("shouldn't fail");
