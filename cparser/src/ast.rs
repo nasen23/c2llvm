@@ -1,11 +1,11 @@
-use crate::ty::*;
 use crate::op::*;
+use crate::ty::*;
 use std::fmt::{Display, Formatter, Result};
 
 pub struct Program {
     // Besides function definition and declaration,
     // There are structdef, enumdef, uniondef, vardef, typedef too.
-    pub decl: Vec<Decl>
+    pub decl: Vec<Decl>,
 }
 
 pub enum Decl {
@@ -25,12 +25,12 @@ pub struct FuncDef {
 }
 
 pub struct Block {
-    pub stmts: Vec<Stmt>
+    pub stmts: Vec<Stmt>,
 }
 
 pub struct TypeDef {
     pub ty: Ty,
-    pub name: String
+    pub name: String,
 }
 
 pub struct VarDef {
@@ -51,7 +51,7 @@ pub enum Expr {
     Call(Call),
     Unary(Unary),
     Binary(Binary),
-    Assign(Assignment)
+    Assign(Assignment),
 }
 
 pub struct Call {
@@ -62,18 +62,18 @@ pub struct Call {
 
 pub struct Unary {
     pub op: UnaOp,
-    pub r: Box<Expr>
+    pub r: Box<Expr>,
 }
 
 pub struct Binary {
     pub op: BinOp,
     pub l: Box<Expr>,
-    pub r: Box<Expr>
+    pub r: Box<Expr>,
 }
 
 pub struct Assignment {
     pub dst: Box<Expr>,
-    pub src: Box<Expr>
+    pub src: Box<Expr>,
 }
 
 pub enum Stmt {
@@ -87,23 +87,23 @@ pub enum Stmt {
     For(For_),
     Return(Option<Expr>),
     Break,
-    Continue
+    Continue,
 }
 
 pub struct If_ {
     pub cond: Expr,
     pub on_true: Block,
-    pub on_false: Option<Block>
+    pub on_false: Option<Block>,
 }
 
 pub struct While_ {
     pub cond: Expr,
-    pub body: Block
+    pub body: Block,
 }
 
 pub struct DoWhile {
     pub cond: Expr,
-    pub body: Block
+    pub body: Block,
 }
 
 pub struct For_ {
@@ -111,7 +111,7 @@ pub struct For_ {
     pub init: Box<Stmt>,
     pub cond: Expr,
     pub update: Box<Stmt>,
-    pub body: Block
+    pub body: Block,
 }
 
 impl Display for Program {
@@ -133,7 +133,7 @@ impl Display for Decl {
             Decl::VarDef(d) => write!(f, "{}", d),
             Decl::FuncDef(d) => write!(f, "defun {}", d),
             Decl::StructDef(d) => write!(f, "struct {}", d),
-            Decl::EnumDef(d) => write!(f, "enum {}", d)
+            Decl::EnumDef(d) => write!(f, "enum {}", d),
         }
     }
 }
@@ -148,11 +148,28 @@ impl Display for VarDef {
     }
 }
 
+// impl Display for Struct {
+//     fn fmt(&self, f: &mut Formatter) -> Result {
+//         if let Some(name) = &self.name {
+//             write!(f, "defstruct {}: {{\n", self.name);
+//         } else {
+//             write!(f, "defstruct: {{\n");
+//         }
+//         for mem in &self.mem {
+//             write!(f, "{}", mem);
+//         }
+//         write!(f, "}}");
+//         Ok(())
+//     }
+// }
+
 impl Display for FuncDef {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(f, "{}(", self.name)?;
         for (count, item) in self.param.iter().enumerate() {
-            if count == 0 { write!(f, "{}", item)?; }
+            if count == 0 {
+                write!(f, "{}", item)?;
+            }
             write!(f, ",{}", item)?;
         }
 
@@ -182,13 +199,22 @@ impl Display for Stmt {
         match self {
             LocalVarDef(ref d) => write!(f, "{}", d),
             ExprEval(ref e) => write!(f, "{}", e),
-            If(ref if_) => write!(f, "if {} {}{}", if_.cond, if_.on_true,
-                              if let Some(ref b) = if_.on_false { format!(" else {}", b) } else { "".to_owned() }),
+            If(ref if_) => write!(
+                f,
+                "if {} {}{}",
+                if_.cond,
+                if_.on_true,
+                if let Some(ref b) = if_.on_false {
+                    format!(" else {}", b)
+                } else {
+                    "".to_owned()
+                }
+            ),
             While(ref w) => write!(f, "while {} {}", w.cond, w.body),
             For(ref f_) => write!(f, "for {};{};{} {}", f_.init, f_.cond, f_.update, f_.body),
             Break => write!(f, "break"),
             Continue => write!(f, "continue"),
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 }
@@ -206,7 +232,7 @@ impl Display for Expr {
             Call(ref c) => write!(f, "{}", c.func),
             Unary(ref u) => write!(f, "uop {}", u.r),
             Binary(ref b) => write!(f, "{} bop {}", b.l, b.r),
-            Assign(ref a) => write!(f, "{} := {}", a.dst, a.src)
+            Assign(ref a) => write!(f, "{} := {}", a.dst, a.src),
         }
     }
 }

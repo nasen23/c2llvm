@@ -29,7 +29,7 @@ impl<'a> Value<'a> {
             Func(func) => func.print_to_string(),
             Array(array) => array.print_to_string(),
             Ptr(ptr) => ptr.print_to_string(),
-            Vec(vec) => vec.print_to_string(),
+            Vector(vec) => vec.print_to_string(),
             _ => unimplemented!(),
         }
     }

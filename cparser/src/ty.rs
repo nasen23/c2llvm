@@ -11,8 +11,6 @@ pub enum TyKind {
     Short(bool),
     Int(bool),
     Long(bool),
-
-
     LLong(bool),
     Float,
     Double,
@@ -27,22 +25,22 @@ pub struct Array {
     // initialized array must have a explicit size
     // array in function param is okay not to have a length
     pub tyk: Box<TyKind>,
-    pub len: Option<u32>
+    pub len: Option<u32>,
 }
 
 pub struct Pointer {
-    pub tyk: Box<TyKind>
+    pub tyk: Box<TyKind>,
 }
 
 pub struct Struct {
     pub name: Option<String>,
-    pub mem: Vec<VarDef>
+    pub mem: Vec<VarDef>,
 }
 
 pub struct Union {
     pub name: Option<String>,
     pub mem: Vec<VarDef>,
-    pub size: usize
+    pub size: usize,
 }
 
 pub struct Enum {
@@ -70,23 +68,40 @@ pub enum Qualifier {
     Volatile,
 }
 
-use Sign::*;
-
 impl Ty {
     pub fn new(kind: TyKind) -> Ty {
-        Ty { kind, stor: StorClass::None, quals: vec![] }
+        Ty {
+            kind,
+            stor: StorClass::None,
+            quals: vec![],
+        }
     }
 
-    pub fn void() -> Ty { Ty::new(TyKind::Void) }
-    pub fn char() -> Ty { Ty::new(TyKind::Char(true)) }
-    pub fn int() -> Ty { Ty::new(TyKind::Int(true)) }
-    pub fn float() -> Ty { Ty::new(TyKind::Float) }
-    pub fn double() -> Ty { Ty::new(TyKind::Double) }
+    pub fn void() -> Ty {
+        Ty::new(TyKind::Void)
+    }
+    pub fn char() -> Ty {
+        Ty::new(TyKind::Char(true))
+    }
+    pub fn int() -> Ty {
+        Ty::new(TyKind::Int(true))
+    }
+    pub fn float() -> Ty {
+        Ty::new(TyKind::Float)
+    }
+    pub fn double() -> Ty {
+        Ty::new(TyKind::Double)
+    }
     pub fn array(kind: TyKind, len: Option<u32>) -> Ty {
-        Ty::new(TyKind::Array(Array { tyk: Box::new(kind), len }))
+        Ty::new(TyKind::Array(Array {
+            tyk: Box::new(kind),
+            len,
+        }))
     }
     pub fn pointer(kind: TyKind) -> Ty {
-        Ty::new(TyKind::Pointer(Pointer { tyk: Box::new(kind) }))
+        Ty::new(TyKind::Pointer(Pointer {
+            tyk: Box::new(kind),
+        }))
     }
     pub fn struct_(s: Struct) -> Ty {
         Ty::new(TyKind::Struct(s))
@@ -121,7 +136,7 @@ impl Display for TyKind {
             Double => write!(f, "double"),
             Array(ref a) => write!(f, "{}[]", a.tyk),
             Pointer(ref p) => write!(f, "{}*", p.tyk),
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 }
@@ -134,7 +149,17 @@ impl Display for Ty {
 
 impl Display for Struct {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}", self.name.as_ref().map_or("", |v| v.as_str()))
+        // write!(f, "{}", self.name.as_ref().map_or("", |v| v.as_str()))
+        if let Some(name) = &self.name {
+            write!(f, "defstruct {}: {{\n", self.name.as_ref().unwrap());
+        } else {
+            write!(f, "defstruct: {{\n");
+        }
+        for mem in &self.mem {
+            write!(f, "{}", mem);
+        }
+        write!(f, "}}");
+        Ok(())
     }
 }
 

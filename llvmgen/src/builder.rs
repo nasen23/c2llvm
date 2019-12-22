@@ -3,7 +3,7 @@ use cparser::ty::*;
 use failure::{Error, Fail};
 
 use crate::context::Compiler;
-use crate::value::{Type, Value};
+use crate::value::Value;
 
 pub type IRResult<'a> = Result<Value<'a>, BuildError>;
 
@@ -79,7 +79,7 @@ impl IRBuilder for Enum {
 }
 
 impl IRBuilder for Ty {
-    fn codegen<'a>(self, compiler: &'a mut Compiler) -> IRBuilder<'a> {
+    fn codegen<'a>(self, compiler: &'a mut Compiler) -> IRResult<'a> {
         Ok(Value::Nil)
     }
 }
@@ -90,6 +90,7 @@ impl IRBuilder for TyKind {
 
         match self {
             TyKind::Void => Ok(VoidT(compiler.context.void_type())),
+            TyKind::Char(signed) => Ok(IntT(compiler.context.i8_type())),
             TyKind::Int(signed) => Ok(IntT(compiler.context.i32_type())),
             TyKind::Short(signed) => Ok(IntT(compiler.context.i16_type())),
             TyKind::Long(signed) => Ok(IntT(compiler.context.i64_type())),
@@ -108,14 +109,17 @@ impl IRBuilder for TyKind {
                         name: String::new(),
                     })
                 }
-            }
+            },
             TyKind::Struct(struct_) => {
                 let types = vec![];
                 for mem in struct_.mem {
-                    types.push(mem.ty.codegen(compiler)?);
+                    let value = mem.ty.codegen(compiler)?;
+                    match value {
+                        Int(val) => types.push(val.into()),
+                    }
                 }
                 Ok(StructT(compiler.context.struct_type(&types[..], false)))
-            },
+            }
         }
     }
 }

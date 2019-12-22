@@ -1,10 +1,35 @@
 pub enum BinOp {
-    Add, Sub, Mul, Div, Mod, And, Or, Le, Lt, Ge, Gt, Eq, Ne, BitOr, BitAnd, BitXor,
-    BitLSft, BitRSft, Comma, Brks, Dot, Arrow
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    And,
+    Or,
+    Le,
+    Lt,
+    Ge,
+    Gt,
+    Eq,
+    Ne,
+    BitOr,
+    BitAnd,
+    BitXor,
+    BitLSft,
+    BitRSft,
+    Comma,
+    Brks,
+    Dot,
+    Arrow,
 }
 
 pub enum UnaOp {
-    Neg, Not, BitRev, Addr, Deref, Sizeof
+    Neg,
+    Not,
+    BitRev,
+    Addr,
+    Deref,
+    Sizeof,
 }
 
 impl BinOp {
@@ -30,7 +55,7 @@ impl BinOp {
             BitLSft => Some(l << r),
             BitRSft => Some(l >> r),
             Comma => Some(r),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -42,7 +67,7 @@ impl UnaOp {
             Neg => Some(r.wrapping_neg()),
             Not => Some((r == 0) as i32),
             BitRev => Some(!r),
-            _ => None
+            _ => None,
         }
     }
 }

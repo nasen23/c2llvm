@@ -76,7 +76,7 @@ pub enum Token {
     _Eps,
     Comment,
 
-    Unknown
+    Unknown,
 }
 
 lexer! {
@@ -158,7 +158,6 @@ lexer! {
     r#"."# => Token::Unknown
 }
 
-
 // parse &str into char
 // TODO: This immediately panics on error, consider sending it to upper level to
 // handle error properly
@@ -173,7 +172,7 @@ fn parse_char(tok: &str) -> char {
         r"\'" => '\'',
         r#"\""# => '\'',
         s if s.len() == 1 => s.chars().next().unwrap(),
-        _ => panic!("Unknown escape character")
+        _ => panic!("Unknown escape character"),
     }
 }
 
@@ -185,20 +184,21 @@ fn parse_int(tok: &str) -> i32 {
     match &tok[..2] {
         // TODO: parse as base of 16 in the first case
         "0x" => tok.parse().unwrap(),
-        _ => tok.parse().unwrap()
+        _ => tok.parse().unwrap(),
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Lexer<'a> {
     original: &'a str,
-    remaining: &'a str
+    remaining: &'a str,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Lexer<'a> {
         Lexer {
-            original: input, remaining: input
+            original: input,
+            remaining: input,
         }
     }
 }
@@ -206,7 +206,7 @@ impl<'a> Lexer<'a> {
 #[derive(Debug, Clone, Copy)]
 pub struct Span {
     pub lo: usize,
-    pub hi: usize
+    pub hi: usize,
 }
 
 impl<'a> Iterator for Lexer<'a> {
@@ -223,16 +223,12 @@ impl<'a> Iterator for Lexer<'a> {
                 return None;
             };
             match tok {
-                Token::_Eps | Token::Comment => {
-                    continue},
-                tok => {
-                    return Some((tok, span))
-                }
+                Token::_Eps | Token::Comment => continue,
+                tok => return Some((tok, span)),
             }
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -250,7 +246,14 @@ mod tests {
     fn raw_next_token_char_init() {
         let mut input = r"char c = '\n';";
         let expected_res = vec![
-            Char, _Eps, Id("c".to_owned()), _Eps, Assign, _Eps, CharLit('\n'), Semi
+            Char,
+            _Eps,
+            Id("c".to_owned()),
+            _Eps,
+            Assign,
+            _Eps,
+            CharLit('\n'),
+            Semi,
         ];
         let mut res = vec![];
 
@@ -259,8 +262,8 @@ mod tests {
                 Some((token, next)) => {
                     res.push(token);
                     input = next;
-                },
-                None => break
+                }
+                None => break,
             }
         }
 
@@ -277,9 +280,7 @@ mod tests {
     fn lexer_empty_for() {
         let lexer = Lexer::new(r"for(;;){}");
         let res: Vec<Token> = lexer.into_iter().map(|t| t.0).collect();
-        let expected = vec![
-            For, LPar, Semi, Semi, RPar, LBrc, RBrc
-        ];
+        let expected = vec![For, LPar, Semi, Semi, RPar, LBrc, RBrc];
 
         assert_eq!(res, expected);
     }
@@ -288,22 +289,49 @@ mod tests {
     fn lexer_bitand_expr() {
         let lexer = Lexer::new(r"a=a&b;");
         let res: Vec<_> = lexer.into_iter().map(|t| t.0).collect();
-        let expected = vec![Id("a".to_owned()), Assign, Id("a".to_owned()), BitAnd, Id("b".to_owned()), Semi];
+        let expected = vec![
+            Id("a".to_owned()),
+            Assign,
+            Id("a".to_owned()),
+            BitAnd,
+            Id("b".to_owned()),
+            Semi,
+        ];
 
         assert_eq!(res, expected);
     }
 
     #[test]
     fn lexer_literals() {
-        test_lexer(r"int* a=12;c=*a&&b;", vec![
-            Int, Mul, Id("a".to_owned()), Assign, IntLit(12), Semi, Id("c".to_owned()), Assign, Mul, Id("a".to_owned()), And, Id("b".to_owned()), Semi
-        ]);
-        test_lexer(r"double* a=0.34", vec![Double, Mul, Id("a".to_owned()), Assign, DoubleLit(0.34)]);
+        test_lexer(
+            r"int* a=12;c=*a&&b;",
+            vec![
+                Int,
+                Mul,
+                Id("a".to_owned()),
+                Assign,
+                IntLit(12),
+                Semi,
+                Id("c".to_owned()),
+                Assign,
+                Mul,
+                Id("a".to_owned()),
+                And,
+                Id("b".to_owned()),
+                Semi,
+            ],
+        );
+        test_lexer(
+            r"double* a=0.34",
+            vec![Double, Mul, Id("a".to_owned()), Assign, DoubleLit(0.34)],
+        );
     }
 
     #[test]
     fn lexer_weird_ids() {
-        test_lexer(r"int absolute_long=1", vec![Int, Id("absolute_long".to_owned()), Assign, IntLit(1)]);
+        test_lexer(
+            r"int absolute_long=1",
+            vec![Int, Id("absolute_long".to_owned()), Assign, IntLit(1)],
+        );
     }
-
 }

@@ -1,8 +1,8 @@
-use plex::parser;
 use crate::ast::*;
-use crate::ty;
+use crate::lexer::{Span, Token, Token::*};
 use crate::op::*;
-use crate::lexer::{Token, Token::*, Span};
+use crate::ty;
+use plex::parser;
 
 parser! {
     fn parse(Token, Span);
@@ -42,10 +42,14 @@ parser! {
     }
 
     funcdef: FuncDef {
-        ty[ty] Id(name) LPar vardeflist_or_empty[defs] RPar block[block] => FuncDef { // int some(int) { ... };
+        // Function definition:
+        // int some(int a, int b) { ... };
+        ty[ty] Id(name) LPar parameter_list_or_empty[defs] RPar block[block] => FuncDef {
             name, ret: ty, param: defs, block: Some(block)
         },
-        ty[ty] Id(name) LPar vardeflist_or_empty[defs] RPar Semi => FuncDef { // int some(int);
+        // Function declaration:
+        // int some(int);
+        ty[ty] Id(name) LPar parameter_list_or_empty[defs] RPar Semi => FuncDef {
             name, ret: ty, param: defs, block: None
         }
     }
@@ -89,17 +93,23 @@ parser! {
         Id(name) Assign IntLit(val) => (name, Some(val))
     }
 
-    vardeflist_or_empty: Vec<VarDef> {
+    parameter_list_or_empty: Vec<VarDef> {
         => vec![],
-        vardeflist[list] => list
+        parameter_list[list] => list
     }
 
-    vardeflist: Vec<VarDef> {
-        vardef[decl] => vec![decl], // (int a)
-        vardeflist[mut decls] Comma vardef[decl] => { // (int a, int b)
-            decls.push(decl);
-            decls
+    parameter_list: Vec<VarDef> {
+        // int a
+        parameter[par]  => vec![par],
+        // int a, int b
+        parameter_list[mut par_list] Comma parameter[par] => {
+            par_list.push(par);
+            par_list
         }
+    }
+
+    parameter: VarDef {
+        ty[ty] Id(s) => VarDef { ty, name: s, value: None }
     }
 
     vardefs: Vec<VarDef> {
@@ -113,11 +123,18 @@ parser! {
     vardef: VarDef {
         ty[ty] Id(name) => VarDef { // int a
             name, ty, value: None
-        }
+        },
         // function definition does not allow something like (int a = 1, int b)
-        // ty[ty] Id(name) Assign expr[e] => VarDef { // int a = 1 + 2
-        //     name, ty, value: Some(e)
-        // }
+        // int a = 1 + 2
+        ty[ty] Id(name) Assign expr[e] => VarDef {
+            name, ty, value: Some(e)
+        },
+        // int a[1];
+        ty[ty] Id(name) LBrk IntLit(len) RBrk Semi => VarDef {
+            name,
+            ty: ty::Ty::array(ty.kind, Some(len as u32)),
+            value: None
+        },
     }
 
     sim_ty: ty::Ty {
@@ -150,7 +167,7 @@ parser! {
     }
 
     stmts: Vec<Stmt> {
-        stmt[s] => vec![s],
+        => vec![],
         stmts[mut stmts] stmt[s] => {
             stmts.push(s);
             stmts
@@ -205,10 +222,6 @@ parser! {
 
     simple: Stmt {
         vardef[vardef] Semi => Stmt::LocalVarDef(vardef),
-        ty[ty] Id(name) Assign expr[e] Semi => // int a = b + c;
-            Stmt::LocalVarDef(VarDef { name, ty, value: Some(e) }),
-        ty[ty] Id(name) LBrk IntLit(len) RBrk =>
-            Stmt::LocalVarDef(VarDef { name, ty: ty::Ty::array(ty.kind, Some(len as u32)), value: None }),
         expr[e] Semi => Stmt::ExprEval(e),
         Semi => Stmt::Skip
     }
@@ -217,6 +230,7 @@ parser! {
         Id(name) => Expr::Id(name),
         IntLit(i) => Expr::IntLit(i),
         CharLit(i) => Expr::CharLit(i),
+        DoubleLit(i) => Expr::FloatLit(i),
         StringLit(i) => Expr::StringLit(i),
         LPar expr[e] RPar => e,
     }
@@ -346,14 +360,14 @@ parser! {
 
 fn mk_bin(l: Expr, r: Expr, op: BinOp) -> Expr {
     Expr::Binary(Binary {
-        op, l: Box::new(l), r: Box::new(r)
+        op,
+        l: Box::new(l),
+        r: Box::new(r),
     })
 }
 
 fn mk_una(r: Expr, op: UnaOp) -> Expr {
-    Expr::Unary(Unary {
-        op, r: Box::new(r)
-    })
+    Expr::Unary(Unary { op, r: Box::new(r) })
 }
 
 #[cfg(test)]
@@ -369,13 +383,113 @@ mod tests {
 
     #[test]
     fn simple_main_function() {
-        let program = parse(Lexer::new("int main() {\n\
-                                            int a = 1;\n\
-                                            int b = a + 2;\n\
-                                        }")).unwrap();
-        assert_eq!("defun main() -> int {\n\
-                    defvar a: int = 1\n\
-                    defvar b: int = a bop 2\n\
-                    }\n", program.to_string());
+        let program = parse(Lexer::new(
+            "int main() {\n\
+                 int a = 1;\n\
+                 int b = a + 2;\n\
+             }",
+        ))
+        .unwrap();
+        assert_eq!(
+            "defun main() -> int {\n\
+                 defvar a: int = 1\n\
+                 defvar b: int = a bop 2\n\
+             }\n",
+            program.to_string()
+        );
+    }
+
+    #[test]
+    fn test_typedef() {
+        let program = parse(Lexer::new("typedef int testint;")).unwrap();
+        assert_eq!("deftype int as testint\n", program.to_string());
+    }
+
+    #[test]
+    fn test_vardef_intlit() {
+        let program = parse(Lexer::new("int a = 1;")).unwrap();
+        assert_eq!("defvar a: int = 1\n", program.to_string());
+    }
+
+    #[test]
+    fn test_vardef_expr() {
+        let program = parse(Lexer::new("int a = 1 + (2 * 7);")).unwrap();
+        assert_eq!("defvar a: int = 1 bop 2 bop 7\n", program.to_string());
+    }
+
+    #[test]
+    fn test_funcdef() {
+        let program = parse(Lexer::new("int sum() {}")).unwrap();
+        assert_eq!("defun sum() -> int {\n}\n", program.to_string());
+    }
+
+    #[test]
+    fn test_funcdef_body() {
+        let program = parse(Lexer::new(
+            "double sum() {\n\
+                 double a = 1.0;\n\
+                 double b = 2.0;\n\
+             }",
+        ))
+        .unwrap();
+        assert_eq!(
+            "defun sum() -> double {\n\
+                 defvar a: double = 1\n\
+                 defvar b: double = 2\n\
+             }\n",
+            program.to_string()
+        );
+    }
+
+    // FIXME: redundant defvar: a -> int
+    #[test]
+    fn test_funcdef_args() {
+        let program = parse(Lexer::new("int sum(int a, int b) {}")).unwrap();
+        assert_eq!(
+            "defun sum(defvar a: int,defvar b: int) -> int {\n}\n",
+            program.to_string()
+        );
+    }
+
+    #[test]
+    fn test_funcdecl() {
+        let program = parse(Lexer::new(
+            "float some();"
+        )).unwrap();
+        assert_eq!(
+            "defun some() -> float\n",
+            program.to_string()
+        );
+    }
+
+    // FIXME: redundant defvar: a -> int
+    #[test]
+    fn test_funcdecl_args() {
+        let program = parse(Lexer::new(
+            "float some(int a, double c);"
+        )).unwrap();
+        assert_eq!(
+            "defun some(defvar a: int,defvar b: double) -> float\n",
+            program.to_string()
+        );
+    }
+
+    // FIXME: panic during parsing
+    #[test]
+    fn test_structdef() {
+        let program = parse(Lexer::new(
+            "struct {\n\
+                 int a;\n\
+                 double b;\n\
+             }test;"
+        )).unwrap();
+        assert_eq!(
+            "defstruct test:{\n\
+                 defvar a: int\n\
+                 defvar b: int\n\
+             }\n
+             ",
+            program.to_string()
+        );
     }
 }
