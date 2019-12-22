@@ -73,7 +73,11 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
         Call(call) => match *call.func {
             Id(name) => {
                 let cname = cstr(&name);
-                let callee = unsafe { LLVMGetNamedFunction(llvm.module, cname.as_ptr()) };
+                let callee = if let Some(func) = llvm.get_func(&name) {
+                    func
+                } else {
+                    return Err(BuildError::UnknownIdent { name });
+                };
 
                 let mut args_llvm = vec![];
                 for arg in call.arg {
