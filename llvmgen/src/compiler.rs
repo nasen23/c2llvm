@@ -190,10 +190,10 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let lhs_type = LLVMTypeOf(lhs);
                     let rhs_type = LLVMTypeOf(rhs);
                     let rhs_cast = llvm.cast_into(rhs, lhs_type).ok_or(BuildError::TypeCast)?;
-                    if llvm.is_int(lhs_type) {
-                        Ok(llvm.build_add(lhs, rhs_cast))
-                    } else {
+                    if llvm.is_float(lhs_type) {
                         Ok(llvm.build_fadd(lhs, rhs_cast))
+                    } else {
+                        Ok(llvm.build_add(lhs, rhs_cast))
                     }
                 },
                 Sub => unsafe {
@@ -202,10 +202,10 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let lhs_type = LLVMTypeOf(lhs);
                     let rhs_type = LLVMTypeOf(rhs);
                     let rhs_cast = llvm.cast_into(rhs, lhs_type).ok_or(BuildError::TypeCast)?;
-                    if llvm.is_int(lhs_type) {
-                        Ok(llvm.build_sub(lhs, rhs_cast))
-                    } else {
+                    if llvm.is_float(lhs_type) {
                         Ok(llvm.build_fsub(lhs, rhs_cast))
+                    } else {
+                        Ok(llvm.build_sub(lhs, rhs_cast))
                     }
                 },
                 Mul => unsafe {
@@ -214,10 +214,10 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let lhs_type = LLVMTypeOf(lhs);
                     let rhs_type = LLVMTypeOf(rhs);
                     let rhs_cast = llvm.cast_into(rhs, lhs_type).ok_or(BuildError::TypeCast)?;
-                    if llvm.is_int(lhs_type) {
-                        Ok(llvm.build_mul(lhs, rhs_cast))
-                    } else {
+                    if llvm.is_float(lhs_type) {
                         Ok(llvm.build_fmul(lhs, rhs_cast))
+                    } else {
+                        Ok(llvm.build_mul(lhs, rhs_cast))
                     }
                 },
                 Div => unsafe {
@@ -226,10 +226,10 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let lhs_type = LLVMTypeOf(lhs);
                     let rhs_type = LLVMTypeOf(rhs);
                     let rhs_cast = llvm.cast_into(rhs, lhs_type).ok_or(BuildError::TypeCast)?;
-                    if llvm.is_int(lhs_type) {
-                        Ok(llvm.build_sdiv(lhs, rhs_cast))
-                    } else {
+                    if llvm.is_float(lhs_type) {
                         Ok(llvm.build_fdiv(lhs, rhs_cast))
+                    } else {
+                        Ok(llvm.build_sdiv(lhs, rhs_cast))
                     }
                 },
                 Mod => unsafe {
@@ -238,10 +238,10 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let lhs_type = LLVMTypeOf(lhs);
                     let rhs_type = LLVMTypeOf(rhs);
                     let rhs_cast = llvm.cast_into(rhs, lhs_type).ok_or(BuildError::TypeCast)?;
-                    if llvm.is_int(lhs_type) {
-                        Ok(llvm.build_srem(lhs, rhs_cast))
-                    } else {
+                    if llvm.is_float(lhs_type) {
                         Ok(llvm.build_frem(lhs, rhs_cast))
+                    } else {
+                        Ok(llvm.build_srem(lhs, rhs_cast))
                     }
                 },
                 And => unsafe {
