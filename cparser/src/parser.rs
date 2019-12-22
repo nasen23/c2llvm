@@ -247,7 +247,8 @@ parser! {
         }),
         post_expr[l] Dot Id(r) => mk_bin(l, Expr::Id(r), BinOp::Dot),
         post_expr[l] Arrow Id(r) => mk_bin(l, Expr::Id(r), BinOp::Arrow),
-        // TODO: ++ and --
+        post_expr[l] Inc => mk_una(l, UnaOp::RInc),
+        post_expr[l] Dec => mk_una(l, UnaOp::RDec)
     }
 
     arg_expr_list: Vec<Expr> {
@@ -261,7 +262,9 @@ parser! {
     unary_expr: Expr {
         post_expr[e] => e,
         // TODO: ++ and --
-        unary_op[op] unary_expr[r] => mk_una(r, op),
+        Inc unary_expr[e] => mk_una(e, UnaOp::LInc),
+        Dec unary_expr[e] => mk_una(e, UnaOp::LDec),
+        unary_op[op] cast_expr[r] => mk_una(r, op),
         Sizeof unary_expr[r] => mk_una(r, UnaOp::Sizeof),
         // TODO: sizeof(type)
     }

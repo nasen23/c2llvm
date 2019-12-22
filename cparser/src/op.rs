@@ -32,6 +32,10 @@ pub enum UnaOp {
     Addr,
     Deref,
     Sizeof,
+    RInc,
+    RDec,
+    LInc,
+    LDec
 }
 
 impl BinOp {

@@ -128,7 +128,39 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                 Sizeof => {
                     // TODO: implement this
                     unimplemented!()
-                }
+                },
+                LInc => unsafe {
+                    let one = LLVMConstInt(LLVMInt32Type(), 1, 0);
+                    let ptr = compile_pointer_expr(*unary.r, llvm)?;
+                    let val = llvm.build_load(ptr);
+                    let res = llvm.build_add(val, one);
+                    llvm.build_store(res, ptr);
+                    Ok(res)
+                },
+                LDec => unsafe {
+                    let one = LLVMConstInt(LLVMInt32Type(), 1, 0);
+                    let ptr = compile_pointer_expr(*unary.r, llvm)?;
+                    let val = llvm.build_load(ptr);
+                    let res = llvm.build_sub(val, one);
+                    llvm.build_store(res, ptr);
+                    Ok(res)
+                },
+                RInc => unsafe {
+                    let one = LLVMConstInt(LLVMInt32Type(), 1, 0);
+                    let ptr = compile_pointer_expr(*unary.r, llvm)?;
+                    let val = llvm.build_load(ptr);
+                    let res = llvm.build_add(val, one);
+                    llvm.build_store(res, ptr);
+                    Ok(val)
+                },
+                RDec => unsafe {
+                    let one = LLVMConstInt(LLVMInt32Type(), 1, 0);
+                    let ptr = compile_pointer_expr(*unary.r, llvm)?;
+                    let val = llvm.build_load(ptr);
+                    let res = llvm.build_sub(val, one);
+                    llvm.build_store(res, ptr);
+                    Ok(val)
+                },
             }
         },
         Binary(binary) => {

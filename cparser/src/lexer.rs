@@ -13,6 +13,9 @@ pub enum Token {
     Signed,
     Unsigned,
 
+    Inc,
+    Dec,
+
     Float,
     Double,
     Typedef,
@@ -115,6 +118,9 @@ lexer! {
     r#"extern"# => Token::Extern,
 
     r#"sizeof"# => Token::Sizeof,
+    r#"\+\+"# => Token::Inc,
+    r#"--"# => Token::Dec,
+
 
     r#"<="# => Token::Le,
     r#">="# => Token::Ge,
