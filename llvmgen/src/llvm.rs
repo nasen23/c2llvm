@@ -13,6 +13,7 @@ pub struct LLVM {
     pub module: LLVMModuleRef,
     pub named_values: HashMap<String, LLVMValueRef>,
     pub funcs: HashMap<String, LLVMValueRef>,
+    pub func_args: HashMap<String, LLVMValueRef>,
     pub cont_block: Option<LLVMBasicBlockRef>,
     pub break_block: Option<LLVMBasicBlockRef>,
     pub cur_func: Option<LLVMValueRef>
@@ -32,6 +33,7 @@ impl LLVM {
                 module,
                 named_values: HashMap::new(),
                 funcs: HashMap::new(),
+                func_args: HashMap::new(),
                 cont_block,
                 break_block,
                 cur_func: None
@@ -69,6 +71,18 @@ impl LLVM {
 
     pub fn set_func(&mut self, name: &str, value: LLVMValueRef) {
         self.funcs.insert(name.to_owned(), value);
+    }
+
+    pub fn add_arg(&mut self, name: &str, value: LLVMValueRef) {
+        self.func_args.insert(name.to_owned(), value);
+    }
+
+    pub fn get_arg(&self, name: &str) -> Option<&LLVMValueRef> {
+        self.func_args.get(name)
+    }
+
+    pub fn clear_arg(&mut self) {
+        self.func_args.clear();
     }
 
     pub fn llvm_ty(&self, tyk: &TyKind) -> LLVMTypeRef {

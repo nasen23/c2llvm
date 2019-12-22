@@ -351,7 +351,6 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                 Brk => unsafe {
                     let lhs = compile_pointer_expr(*binary.l, llvm)?;
                     let rhs = compile_expr(*binary.r, llvm)?;
-                    let rhs_cast = llvm.cast_into(rhs, LLVMInt32Type());
                     let zero = llvm.zero();
                     // function argument should use an indice like [index] here
                     let ptr = llvm.build_gep(lhs, &mut [zero, rhs]);
@@ -522,17 +521,16 @@ pub fn compile_stmt(stmt: Stmt, llvm: &mut LLVM) -> IRResult<()> {
                     return Err(BuildError::NotInFunc);
                 };
 
-                let init = llvm.add_block(func, "init");
                 let cond_block = llvm.add_block(func, "cond");
                 let loop_ = llvm.add_block(func, "loop");
                 let update = llvm.add_block(func, "update");
                 let end = llvm.add_block(func, "end");
 
-                llvm.pos_builder_at_end(init);
                 if let Some(init_expr) = for_.init {
                     compile_expr(init_expr, llvm)?;
                 }
 
+                llvm.br(cond_block);
                 llvm.pos_builder_at_end(cond_block);
                 let cond = compile_expr(for_.cond, llvm)?;
                 let tmp;
@@ -545,7 +543,6 @@ pub fn compile_stmt(stmt: Stmt, llvm: &mut LLVM) -> IRResult<()> {
                 // Generate condition block
                 // Add a new branch
 
-                llvm.br(cond_block);
                 let result = llvm.condbr(tmp, loop_, end);
 
                 llvm.break_block = Some(end);
@@ -558,6 +555,7 @@ pub fn compile_stmt(stmt: Stmt, llvm: &mut LLVM) -> IRResult<()> {
                         compile_stmt(stmt, llvm)?;
                     }
                 }
+                llvm.br(update);
 
                 llvm.pos_builder_at_end(update);
                 if let Some(update_expr) = for_.update {
@@ -634,12 +632,13 @@ pub fn compile_decl(decl: Decl, llvm: &mut LLVM) -> IRResult<()> {
                         let arg = llvm.get_param(func, i as u32);
                         let ptr = llvm.alloca(arg_types[i]);
                         llvm.build_store(arg, ptr);
-                        llvm.set_var(&a.name, ptr);
+                        llvm.add_arg(&a.name, ptr);
                     }
                     llvm.set_var(name, func);
                     for stmt in body.stmts {
                         compile_stmt(stmt, llvm)?;
                     }
+                    llvm.clear_arg();
                 }
 
                 // TODO: check return stmt
@@ -773,8 +772,10 @@ mod tests {
         int nice(char a);\n\
         int nice(char a) { return 0; }\n\
         int main() {\n\
-            char a[10];\n\
-            return fewjoj(1);\n\
+            char *a;\n\
+            int i;
+            for (i=0;*(a+i)!=0;i++);\n\
+            return 0;
         }")).unwrap();
         let mut llvm = LLVM::new();
         compile_program(program, &mut llvm).expect("shouldn't fail");
