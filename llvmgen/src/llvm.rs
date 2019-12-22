@@ -112,6 +112,40 @@ impl LLVM {
         }
     }
 
+    pub fn count_param_types(&self, func_ty: LLVMTypeRef) -> u32 {
+        unsafe { LLVMCountParamTypes(func_ty) }
+    }
+
+    pub fn get_param_types(&self, func_ty: LLVMTypeRef) -> Vec<LLVMTypeRef> {
+        let count = self.count_param_types(func_ty);
+        let mut raw_vec: Vec<LLVMTypeRef> = Vec::with_capacity(count as usize);
+        let ptr = raw_vec.as_mut_ptr();
+
+        let new_vec = unsafe {
+            LLVMGetParamTypes(func_ty, ptr);
+            std::slice::from_raw_parts(ptr, count as usize).to_vec()
+        };
+
+        new_vec
+    }
+
+    pub fn count_params(&self, func: LLVMValueRef) -> u32 {
+        unsafe { LLVMCountParams(func) }
+    }
+
+    pub fn get_params(&self, func: LLVMValueRef) -> Vec<LLVMValueRef> {
+        let count = self.count_params(func);
+        let mut raw_vec: Vec<LLVMValueRef> = Vec::with_capacity(count as usize);
+        let ptr = raw_vec.as_mut_ptr();
+
+        let new_vec = unsafe {
+            LLVMGetParams(func, ptr);
+            std::slice::from_raw_parts(ptr, count as usize).to_vec()
+        };
+
+        new_vec
+    }
+
     pub fn alloca(&self, ty: LLVMTypeRef) -> LLVMValueRef {
         unsafe {
             LLVMBuildAlloca(self.builder, ty, cstr("alloca").as_ptr())
@@ -263,6 +297,8 @@ impl LLVM {
             _ => LLVMIntPredicate::LLVMIntNE,
         };
         unsafe {
+            let to_type = LLVMTypeOf(op1);
+            let op2 = self.cast_into(op2, to_type).unwrap();
             LLVMBuildICmp(self.builder, predicate, op1, op2, cstr("icmp_signed").as_ptr())
         }
     }

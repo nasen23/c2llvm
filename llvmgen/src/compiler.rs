@@ -52,22 +52,19 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
             None => Err(BuildError::UnknownIdent { name }),
         },
         IntLit(int) => unsafe {
-            let ty = LLVMIntTypeInContext(llvm.ctx, 32);
-            Ok(LLVMConstInt(ty, int as u64, 0))
+            Ok(LLVMConstInt(LLVMInt32Type(), int as u64, 0))
         },
         FloatLit(float) => unsafe {
-            let ty = LLVMFloatTypeInContext(llvm.ctx);
-            Ok(LLVMConstReal(ty, float))
+            Ok(LLVMConstReal(LLVMFloatType(), float))
         },
         CharLit(ch) => unsafe {
-            let ty = LLVMIntTypeInContext(llvm.ctx, 8);
-            Ok(LLVMConstInt(ty, ch as u64, 0))
+            Ok(LLVMConstInt(LLVMInt1Type(), ch as u64, 0))
         },
         StringLit(string) => unsafe {
             Ok(LLVMConstString(
                 cstr(&string).as_ptr(),
                 (string.len() + 1) as u32,
-                0,
+                1,
             ))
         },
         Call(call) => match *call.func {
@@ -79,22 +76,30 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     return Err(BuildError::UnknownIdent { name });
                 };
 
+                let args = llvm.get_params(*callee);
+                let n_args = llvm.count_params(*callee);
                 let mut args_llvm = vec![];
-                for arg in call.arg {
+                let call_n_args = call.arg.len();
+                for (i, arg) in call.arg.into_iter().enumerate() {
                     let expr = compile_expr(arg, llvm)?;
-                    args_llvm.push(expr);
+                    if i < n_args as usize {
+                        let to_ty = unsafe { LLVMTypeOf(args[i]) };
+                        let casted = llvm.cast_into(expr, to_ty).ok_or(BuildError::TypeCast)?;
+                        args_llvm.push(casted);
+                    } else {
+                        args_llvm.push(expr);
+                    }
                 }
-                let n_args = unsafe { LLVMCountParams(*callee) };
-                if n_args as usize != args_llvm.len() {
-                    return Err(BuildError::ArgumentCount { name });
-                }
+                // if n_args as usize != args_llvm.len() {
+                //     return Err(BuildError::ArgumentCount { name });
+                // }
                 let name = cstr("calltmp");
                 unsafe {
                     Ok(LLVMBuildCall(
                         llvm.builder,
                         *callee,
                         args_llvm.as_mut_ptr(),
-                        n_args,
+                        call_n_args as u32,
                         name.as_ptr(),
                     ))
                 }
@@ -188,7 +193,6 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let lhs = compile_expr(*binary.l, llvm)?;
                     let rhs = compile_expr(*binary.r, llvm)?;
                     let lhs_type = LLVMTypeOf(lhs);
-                    let rhs_type = LLVMTypeOf(rhs);
                     let rhs_cast = llvm.cast_into(rhs, lhs_type).ok_or(BuildError::TypeCast)?;
                     if llvm.is_float(lhs_type) {
                         Ok(llvm.build_fadd(lhs, rhs_cast))
@@ -200,7 +204,6 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let lhs = compile_expr(*binary.l, llvm)?;
                     let rhs = compile_expr(*binary.r, llvm)?;
                     let lhs_type = LLVMTypeOf(lhs);
-                    let rhs_type = LLVMTypeOf(rhs);
                     let rhs_cast = llvm.cast_into(rhs, lhs_type).ok_or(BuildError::TypeCast)?;
                     if llvm.is_float(lhs_type) {
                         Ok(llvm.build_fsub(lhs, rhs_cast))
@@ -212,7 +215,6 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let lhs = compile_expr(*binary.l, llvm)?;
                     let rhs = compile_expr(*binary.r, llvm)?;
                     let lhs_type = LLVMTypeOf(lhs);
-                    let rhs_type = LLVMTypeOf(rhs);
                     let rhs_cast = llvm.cast_into(rhs, lhs_type).ok_or(BuildError::TypeCast)?;
                     if llvm.is_float(lhs_type) {
                         Ok(llvm.build_fmul(lhs, rhs_cast))
@@ -224,7 +226,6 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let lhs = compile_expr(*binary.l, llvm)?;
                     let rhs = compile_expr(*binary.r, llvm)?;
                     let lhs_type = LLVMTypeOf(lhs);
-                    let rhs_type = LLVMTypeOf(rhs);
                     let rhs_cast = llvm.cast_into(rhs, lhs_type).ok_or(BuildError::TypeCast)?;
                     if llvm.is_float(lhs_type) {
                         Ok(llvm.build_fdiv(lhs, rhs_cast))
@@ -236,7 +237,6 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let lhs = compile_expr(*binary.l, llvm)?;
                     let rhs = compile_expr(*binary.r, llvm)?;
                     let lhs_type = LLVMTypeOf(lhs);
-                    let rhs_type = LLVMTypeOf(rhs);
                     let rhs_cast = llvm.cast_into(rhs, lhs_type).ok_or(BuildError::TypeCast)?;
                     if llvm.is_float(lhs_type) {
                         Ok(llvm.build_frem(lhs, rhs_cast))
@@ -248,7 +248,6 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let lhs = compile_expr(*binary.l, llvm)?;
                     let rhs = compile_expr(*binary.r, llvm)?;
                     let lhs_type = LLVMTypeOf(lhs);
-                    let rhs_type = LLVMTypeOf(rhs);
                     let rhs_cast = llvm.cast_into(rhs, lhs_type).ok_or(BuildError::TypeCast)?;
                     Ok(llvm.build_and(lhs, rhs_cast))
                 },
@@ -256,7 +255,6 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let lhs = compile_expr(*binary.l, llvm)?;
                     let rhs = compile_expr(*binary.r, llvm)?;
                     let lhs_type = LLVMTypeOf(lhs);
-                    let rhs_type = LLVMTypeOf(rhs);
                     let rhs_cast = llvm.cast_into(rhs, lhs_type).ok_or(BuildError::TypeCast)?;
                     Ok(llvm.build_or(lhs, rhs_cast))
                 },
@@ -349,7 +347,7 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     Ok(lhs)
                 },
                 Brk => unsafe {
-                    let lhs = compile_pointer_expr(*binary.l, llvm)?;
+                    let lhs = compile_expr(*binary.l, llvm)?;
                     let rhs = compile_expr(*binary.r, llvm)?;
                     let ptr = llvm.build_gep(lhs, &mut [rhs]);
                     Ok(llvm.build_load(ptr))

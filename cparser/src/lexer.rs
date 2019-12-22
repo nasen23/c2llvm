@@ -155,13 +155,22 @@ lexer! {
     r#"\{"# => Token::LBrc,
     r#"\}"# => Token::RBrc,
 
-    r#""[^"\\]*(\\.[^"\\]*)*""# => Token::StringLit(tok[1..(tok.len() - 1)].to_owned()),
+    r#""[^"\\]*(\\.[^"\\]*)*""# => Token::StringLit(parse_str(&tok[1..(tok.len() - 1)])),
     r#"'(\\.|[^'])'"# => Token::CharLit(parse_char(tok)),
     r#"[0-9]+|(0x[0-9a-fA-F]+)"# => Token::IntLit(parse_int(tok)),
     r#"[0-9]+\.[0-9]*"# => Token::DoubleLit(tok.parse::<f64>().unwrap()),
     r#"[a-zA-Z][a-zA-Z0-9_]*"# => Token::Id(tok.to_owned()),
 
     r#"."# => Token::Unknown
+}
+
+fn parse_str(tok: &str) -> String {
+    tok.replace("\\n", "\n")
+       .replace("\\r", "\r")
+       .replace("\\t", "\t")
+       .replace("\\\\", "\\")
+       .replace("\\'", "'")
+       .replace("\\\"", "\"")
 }
 
 // parse &str into char
