@@ -114,8 +114,8 @@ parser! {
     }
 
     vardefs: Vec<VarDef> {
-        vardef[decl] => vec![decl],
-        vardefs[mut decls] Semi vardef[decl] => { // int a; int b (used in struct)
+        vardef[decl] Semi => vec![decl],
+        vardefs[mut decls] vardef[decl] Semi => { // int a; int b (used in struct)
             decls.push(decl);
             decls
         }
@@ -474,7 +474,7 @@ mod tests {
             "float some(int a, double c);"
         )).unwrap();
         assert_eq!(
-            "defun some(defvar a: int,defvar b: double) -> float\n",
+            "defun some(defvar a: int,defvar c: double) -> float\n",
             program.to_string()
         );
     }
@@ -483,10 +483,10 @@ mod tests {
     #[test]
     fn test_structdef() {
         let program = parse_(Lexer::new(
-            "struct {\n\
+            "struct test{\n\
                  int a;\n\
                  double b;\n\
-             }test;"
+             };"
         )).unwrap();
         assert_eq!(
             "defstruct test:{\n\

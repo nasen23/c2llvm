@@ -169,6 +169,7 @@ impl Display for FuncDef {
         for (count, item) in self.param.iter().enumerate() {
             if count == 0 {
                 write!(f, "{}", item)?;
+                continue;
             }
             write!(f, ",{}", item)?;
         }
