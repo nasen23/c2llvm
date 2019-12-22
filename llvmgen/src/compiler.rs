@@ -703,6 +703,23 @@ mod tests {
         assert_eq!(result, "fe")
     }
 
-
+    #[test]
+    fn test_two_func() {
+        let program = parse(Lexer::new("
+        int func() {\n\
+            int a = 1;
+            return a;
+        }
+        int main() {\n\
+            char a[10];\n\
+            a[1] = 1;
+            return func();\n\
+        }")).unwrap();
+        let mut llvm = LLVM::new();
+        compile_program(program, &mut llvm).expect("shouldn't fail");
+        let result = llvm.print_to_string();
+        println!("{}", result);
+        assert_eq!(result, "fe")
+    }
 
 }

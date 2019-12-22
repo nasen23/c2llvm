@@ -98,7 +98,7 @@ parser! {
         => (vec![], false),
         Dot Dot Dot => (vec![], true),
         parameter_list[list] => (list, false),
-        parameter_list[list] Dot Dot Dot => (list, true)
+        parameter_list[list] Comma Dot Dot Dot => (list, true)
     }
 
     parameter_list: Vec<VarDef> {
