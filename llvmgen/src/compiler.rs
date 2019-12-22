@@ -351,9 +351,7 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                 Brk => unsafe {
                     let lhs = compile_pointer_expr(*binary.l, llvm)?;
                     let rhs = compile_expr(*binary.r, llvm)?;
-                    let zero = llvm.zero();
-                    // function argument should use an indice like [index] here
-                    let ptr = llvm.build_gep(lhs, &mut [zero, rhs]);
+                    let ptr = llvm.build_gep(lhs, &mut [rhs]);
                     Ok(llvm.build_load(ptr))
                 },
                 Dot => unsafe {
@@ -398,9 +396,8 @@ pub fn compile_pointer_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
         Binary(binary) if binary.op == BinOp::Brks => {
             let lhs = compile_pointer_expr(*binary.l, llvm)?;
             let rhs = compile_expr(*binary.r, llvm)?;
-            let zero = llvm.zero();
             // function argument should use an indice like [rhs] here
-            Ok(llvm.build_gep(lhs, &mut [zero, rhs]))
+            Ok(llvm.build_gep(lhs, &mut [rhs]))
         },
         Unary(unary) if unary.op == UnaOp::Deref => {
             compile_expr(*unary.r, llvm)
@@ -632,7 +629,7 @@ pub fn compile_decl(decl: Decl, llvm: &mut LLVM) -> IRResult<()> {
                         let arg = llvm.get_param(func, i as u32);
                         let ptr = llvm.alloca(arg_types[i]);
                         llvm.build_store(arg, ptr);
-                        llvm.add_arg(&a.name, ptr);
+                        llvm.set_var(&a.name, ptr);
                     }
                     llvm.set_var(name, func);
                     for stmt in body.stmts {
@@ -774,7 +771,25 @@ mod tests {
         int main() {\n\
             char *a;\n\
             int i;
-            for (i=0;*(a+i)!=0;i++);\n\
+            for (i=0;a[i]!=0;i++);\n\
+            return 0;
+        }")).unwrap();
+        let mut llvm = LLVM::new();
+        compile_program(program, &mut llvm).expect("shouldn't fail");
+        let result = llvm.print_to_string();
+        println!("{}", result);
+        assert_eq!(result, "fe")
+    }
+
+    #[test]
+    fn test_pointer_brk() {
+        let program = parse(Lexer::new("
+        int nice(char *a);\n\
+        int nice(char *a) { a[1] = 1; return 0; }\n\
+        int main() {\n\
+            char *a;\n\
+            int i;\n\
+            a[1] = 1;
             return 0;
         }")).unwrap();
         let mut llvm = LLVM::new();

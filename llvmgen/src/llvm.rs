@@ -1,6 +1,6 @@
 use llvm_sys::core::*;
 use llvm_sys::prelude::*;
-use llvm_sys::{LLVMIntPredicate, LLVMRealPredicate, LLVMType, LLVMTypeKind};
+use llvm_sys::{LLVMValueKind, LLVMIntPredicate, LLVMRealPredicate, LLVMType, LLVMTypeKind};
 use std::collections::HashMap;
 use std::ffi::CStr;
 
@@ -356,10 +356,10 @@ impl LLVM {
         }
     }
 
-    pub fn is_argument(&self, llvm_type: LLVMTypeRef) -> bool {
+    pub fn is_argument(&self, value: LLVMValueRef) -> bool {
         unsafe {
-            match LLVMGetTypeKind(llvm_type) {
-                LLVMTypeKind::LLVMArrayTypeKind => true,
+            match LLVMGetValueKind(value) {
+                LLVMValueKind::LLVMArgumentValueKind => true,
                 _ => false,
             }
         }
