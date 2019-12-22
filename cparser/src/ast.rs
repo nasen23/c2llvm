@@ -22,6 +22,7 @@ pub struct FuncDef {
     pub ret: Ty,
     pub param: Vec<VarDef>,
     pub block: Option<Block>,
+    pub var_arg: bool
 }
 
 pub struct Block {

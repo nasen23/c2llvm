@@ -46,12 +46,12 @@ parser! {
         // Function definition:
         // int some(int a, int b) { ... };
         ty[ty] Id(name) LPar parameter_list_or_empty[defs] RPar block[block] => FuncDef {
-            name, ret: ty, param: defs, block: Some(block)
+            name, ret: ty, param: defs.0, block: Some(block), var_arg: defs.1
         },
         // Function declaration:
         // int some(int);
         ty[ty] Id(name) LPar parameter_list_or_empty[defs] RPar Semi => FuncDef {
-            name, ret: ty, param: defs, block: None
+            name, ret: ty, param: defs.0, block: None, var_arg: defs.1
         }
     }
 
@@ -94,9 +94,11 @@ parser! {
         Id(name) Assign IntLit(val) => (name, Some(val))
     }
 
-    parameter_list_or_empty: Vec<VarDef> {
-        => vec![],
-        parameter_list[list] => list
+    parameter_list_or_empty: (Vec<VarDef>, bool) {
+        => (vec![], false),
+        Dot Dot Dot => (vec![], true),
+        parameter_list[list] => (list, false),
+        parameter_list[list] Dot Dot Dot => (list, true)
     }
 
     parameter_list: Vec<VarDef> {

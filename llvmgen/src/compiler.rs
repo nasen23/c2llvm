@@ -580,7 +580,7 @@ pub fn compile_decl(decl: Decl, llvm: &mut LLVM) -> IRResult<()> {
                     .map(|def| llvm.llvm_ty(&def.ty.kind))
                     .collect();
 
-                let func = llvm.add_func(name, arg_types.as_mut_slice(), ret);
+                let func = llvm.add_func(name, arg_types.as_mut_slice(), ret, funcdef.var_arg);
                 llvm.cur_func = Some(func);
                 let block = llvm.add_block(func, "entry");
                 llvm.pos_builder_at_end(block);

@@ -114,9 +114,10 @@ impl LLVM {
         }
     }
 
-    pub fn add_func(&self, name: &str, args: &mut [LLVMTypeRef], ret: LLVMTypeRef) -> LLVMValueRef {
+    pub fn add_func(&self, name: &str, args: &mut [LLVMTypeRef], ret: LLVMTypeRef, var_arg: bool) -> LLVMValueRef {
         unsafe {
-            let fun_type = LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as u32, 0);
+            let var_arg = if var_arg { 1 } else { 0 };
+            let fun_type = LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as u32, var_arg);
             LLVMAddFunction(self.module, cstr(name).as_ptr(), fun_type)
         }
     }
