@@ -184,10 +184,13 @@ fn parse_char(tok: &str) -> char {
         r"\r" => '\r',
         r"\t" => '\t',
         r"\\" => '\\',
+        r"\0" => '\0',
         r"\'" => '\'',
         r#"\""# => '\'',
         s if s.len() == 1 => s.chars().next().unwrap(),
-        _ => panic!("Unknown escape character"),
+        _ => {
+            panic!(format!("Unknown escape character '{}'", tok))
+        }
     }
 }
 

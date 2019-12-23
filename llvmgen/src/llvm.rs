@@ -41,6 +41,14 @@ impl LLVM {
         }
     }
 
+    pub fn value_as_str(&self, value: LLVMValueRef) -> &str {
+        unsafe {
+            let c_buf = LLVMPrintValueToString(value);
+            let c_str = CStr::from_ptr(c_buf);
+            c_str.to_str().unwrap()
+        }
+    }
+
     pub fn print_to_file(&self, name: &str) {
         unsafe {
             let ll_name = cstr(name);
@@ -146,9 +154,9 @@ impl LLVM {
         new_vec
     }
 
-    pub fn alloca(&self, ty: LLVMTypeRef) -> LLVMValueRef {
+    pub fn alloca(&self, ty: LLVMTypeRef, name: &str) -> LLVMValueRef {
         unsafe {
-            LLVMBuildAlloca(self.builder, ty, cstr("alloca").as_ptr())
+            LLVMBuildAlloca(self.builder, ty, cstr(name).as_ptr())
         }
     }
 
@@ -208,9 +216,9 @@ impl LLVM {
         }
     }
 
-    pub fn build_load(&self, ptr: LLVMValueRef) -> LLVMValueRef {
+    pub fn build_load(&self, ptr: LLVMValueRef, name: &str) -> LLVMValueRef {
         unsafe {
-            LLVMBuildLoad(self.builder, ptr, cstr("loadvar").as_ptr())
+            LLVMBuildLoad(self.builder, ptr, cstr(name).as_ptr())
         }
     }
 

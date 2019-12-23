@@ -48,7 +48,7 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
 
     match expr {
         Id(name) => match llvm.get_var(&name) {
-            Some(var) => Ok(llvm.build_load(*var)),
+            Some(var) => Ok(llvm.build_load(*var, &format!("load_{}", name))),
             None => Err(BuildError::UnknownIdent { name }),
         },
         IntLit(int) => unsafe {
@@ -58,7 +58,7 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
             Ok(LLVMConstReal(LLVMFloatType(), float))
         },
         CharLit(ch) => unsafe {
-            Ok(LLVMConstInt(LLVMInt1Type(), ch as u64, 0))
+            Ok(LLVMConstInt(LLVMInt8Type(), ch as u64, 0))
         },
         StringLit(string) => unsafe {
             Ok(LLVMConstString(
@@ -93,7 +93,7 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                 // if n_args as usize != args_llvm.len() {
                 //     return Err(BuildError::ArgumentCount { name });
                 // }
-                let name = cstr("calltmp");
+                let name = cstr("call");
                 unsafe {
                     Ok(LLVMBuildCall(
                         llvm.builder,
@@ -113,9 +113,9 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let expr = compile_expr(*unary.r, llvm)?;
                     // Judging by expr type
                     if llvm.is_int(LLVMTypeOf(expr)) {
-                        Ok(LLVMBuildNeg(llvm.builder, expr, cstr("negtmp").as_ptr()))
+                        Ok(LLVMBuildNeg(llvm.builder, expr, cstr("neg").as_ptr()))
                     } else {
-                        Ok(LLVMBuildFNeg(llvm.builder, expr, cstr("fnegtmp").as_ptr()))
+                        Ok(LLVMBuildFNeg(llvm.builder, expr, cstr("fneg").as_ptr()))
                     }
                 },
                 Not => unsafe {
@@ -127,12 +127,12 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                 },
                 BitRev => unsafe {
                     let expr = compile_expr(*unary.r, llvm)?;
-                    Ok(LLVMBuildNot(llvm.builder, expr, cstr("nottmp").as_ptr()))
+                    Ok(LLVMBuildNot(llvm.builder, expr, cstr("not").as_ptr()))
                 },
                 Addr => compile_pointer_expr(*unary.r, llvm),
                 Deref => unsafe {
                     let expr = compile_expr(*unary.r, llvm)?;
-                    Ok(LLVMBuildLoad(llvm.builder, expr, cstr("load").as_ptr()))
+                    Ok(LLVMBuildLoad(llvm.builder, expr, cstr("loadptr").as_ptr()))
                 },
                 Sizeof => {
                     // TODO: implement this
@@ -141,32 +141,48 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                 LInc => unsafe {
                     let one = LLVMConstInt(LLVMInt32Type(), 1, 0);
                     let ptr = compile_pointer_expr(*unary.r, llvm)?;
-                    let val = llvm.build_load(ptr);
-                    let res = llvm.build_add(val, one);
+                    let val = llvm.build_load(ptr, &"loadvar");
+                    let res = if llvm.is_pointer(LLVMTypeOf(val)) {
+                        llvm.build_gep(val, &mut [one])
+                    } else {
+                        llvm.build_add(val, one)
+                    };
                     llvm.build_store(res, ptr);
                     Ok(res)
                 },
                 LDec => unsafe {
                     let one = LLVMConstInt(LLVMInt32Type(), 1, 0);
                     let ptr = compile_pointer_expr(*unary.r, llvm)?;
-                    let val = llvm.build_load(ptr);
-                    let res = llvm.build_sub(val, one);
+                    let val = llvm.build_load(ptr, &"loadvar");
+                    let res = if llvm.is_pointer(LLVMTypeOf(val)) {
+                        llvm.build_gep(val, &mut [one])
+                    } else {
+                        llvm.build_sub(val, one)
+                    };
                     llvm.build_store(res, ptr);
                     Ok(res)
                 },
                 RInc => unsafe {
                     let one = LLVMConstInt(LLVMInt32Type(), 1, 0);
                     let ptr = compile_pointer_expr(*unary.r, llvm)?;
-                    let val = llvm.build_load(ptr);
-                    let res = llvm.build_add(val, one);
+                    let val = llvm.build_load(ptr, &"loadvar");
+                    let res = if llvm.is_pointer(LLVMTypeOf(val)) {
+                        llvm.build_gep(val, &mut [one])
+                    } else {
+                        llvm.build_add(val, one)
+                    };
                     llvm.build_store(res, ptr);
                     Ok(val)
                 },
                 RDec => unsafe {
                     let one = LLVMConstInt(LLVMInt32Type(), 1, 0);
                     let ptr = compile_pointer_expr(*unary.r, llvm)?;
-                    let val = llvm.build_load(ptr);
-                    let res = llvm.build_sub(val, one);
+                    let val = llvm.build_load(ptr, &"loadvar");
+                    let res = if llvm.is_pointer(LLVMTypeOf(val)) {
+                        llvm.build_gep(val, &mut [one])
+                    } else {
+                        llvm.build_sub(val, one)
+                    };
                     llvm.build_store(res, ptr);
                     Ok(val)
                 },
@@ -174,19 +190,6 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
         },
         Binary(binary) => {
             use BinOp::*;
-            match binary.op {
-                And => unsafe {
-                    let lhs = compile_expr(*binary.l, llvm)?;
-                    let lhs_cast = llvm.cast_into(lhs, LLVMInt1Type());
-                    let result = llvm.alloca(LLVMInt1Type());
-                    // if lhs is 0, we're not going to evaluate rhs
-                    unimplemented!()
-                },
-                Or => {
-                    unimplemented!()
-                },
-                _ => {}
-            }
 
             match binary.op {
                 Add => unsafe {
@@ -263,7 +266,6 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let rhs = compile_expr(*binary.r, llvm)?;
                     let lhs_type = LLVMTypeOf(lhs);
                     let rhs_type = LLVMTypeOf(rhs);
-                    let rhs_cast = llvm.cast_into(rhs, lhs_type).ok_or(BuildError::TypeCast)?;
                     if llvm.is_float(lhs_type) || llvm.is_float(rhs_type) {
                         Ok(llvm.build_fcmp("<=", lhs, rhs))
                     } else {
@@ -347,10 +349,17 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     Ok(lhs)
                 },
                 Brk => unsafe {
-                    let lhs = compile_expr(*binary.l, llvm)?;
-                    let rhs = compile_expr(*binary.r, llvm)?;
-                    let ptr = llvm.build_gep(lhs, &mut [rhs]);
-                    Ok(llvm.build_load(ptr))
+                    let lhs = compile_pointer_expr(*binary.l, llvm)?;
+                    let ptr = if llvm.is_array(LLVMGetElementType(LLVMTypeOf(lhs))) {
+                        let rhs = compile_expr(*binary.r, llvm)?;
+                        let zero = llvm.zero();
+                        llvm.build_gep(lhs, &mut [zero, rhs])
+                    } else {
+                        let lvalue = llvm.build_load(lhs, "");
+                        let rhs = compile_expr(*binary.r, llvm)?;
+                        llvm.build_gep(lvalue, &mut [rhs])
+                    };
+                    Ok(llvm.build_load(ptr, "loadptr"))
                 },
                 Dot => unsafe {
                     let lhs = compile_pointer_expr(*binary.l, llvm)?;
@@ -359,7 +368,7 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let index = LLVMConstInt(LLVMInt32Type(), index, 0);
                     let zero = llvm.zero();
                     let ptr = llvm.build_gep(lhs, &mut [zero, index]);
-                    Ok(llvm.build_load(ptr))
+                    Ok(llvm.build_load(ptr, &"loadvar"))
                 },
                 Arrow => unsafe {
                     let lhs = compile_expr(*binary.l, llvm)?;
@@ -368,7 +377,7 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
                     let index = LLVMConstInt(LLVMInt32Type(), index, 0);
                     let zero = llvm.zero();
                     let ptr = llvm.build_gep(lhs, &mut [zero, index]);
-                    Ok(llvm.build_load(ptr))
+                    Ok(llvm.build_load(ptr, &"loadvar"))
                 },
                 _ => unreachable!()
             }
@@ -378,6 +387,7 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
             let rhs = compile_expr(*assign.src, llvm)?;
             let element_type = LLVMGetElementType(LLVMTypeOf(lhs));
             let rhs = llvm.cast_into(rhs, element_type).ok_or(BuildError::TypeCast)?;
+            println!("{} := {}", llvm.value_as_str(lhs), llvm.value_as_str(rhs));
             Ok(llvm.build_store(rhs, lhs))
         }
     }
@@ -391,11 +401,17 @@ pub fn compile_pointer_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
             Some(var) => Ok(*var),
             None => Err(BuildError::UnknownIdent { name }),
         },
-        Binary(binary) if binary.op == BinOp::Brks => {
+        Binary(binary) if binary.op == BinOp::Brks => unsafe {
             let lhs = compile_pointer_expr(*binary.l, llvm)?;
-            let rhs = compile_expr(*binary.r, llvm)?;
-            // function argument should use an indice like [rhs] here
-            Ok(llvm.build_gep(lhs, &mut [rhs]))
+            if llvm.is_array(LLVMGetElementType(LLVMTypeOf(lhs))) {
+                let rhs = compile_expr(*binary.r, llvm)?;
+                let zero = llvm.zero();
+                Ok(llvm.build_gep(lhs, &mut [zero, rhs]))
+            } else {
+                let lvalue = llvm.build_load(lhs, "load");
+                let rhs = compile_expr(*binary.r, llvm)?;
+                Ok(llvm.build_gep(lvalue, &mut [rhs]))
+            }
         },
         Unary(unary) if unary.op == UnaOp::Deref => {
             compile_expr(*unary.r, llvm)
@@ -410,10 +426,12 @@ pub fn compile_stmt(stmt: Stmt, llvm: &mut LLVM) -> IRResult<()> {
     unsafe {
         match stmt {
             LocalVarDef(vardef) => {
-                let tmp = llvm.alloca(llvm.llvm_ty(&vardef.ty.kind));
+                let tmp = llvm.alloca(llvm.llvm_ty(&vardef.ty.kind), &vardef.name);
                 llvm.set_var(&vardef.name, tmp);
                 if let Some(val) = vardef.value {
                     let expr = compile_expr(val, llvm)?;
+                    let tmp_ty = LLVMGetElementType(LLVMTypeOf(tmp));
+                    let expr = llvm.cast_into(expr, tmp_ty).ok_or(BuildError::TypeCast)?;
                     llvm.build_store(expr, tmp);
                 }
                 Ok(())
@@ -475,6 +493,7 @@ pub fn compile_stmt(stmt: Stmt, llvm: &mut LLVM) -> IRResult<()> {
                 let loop_ = llvm.add_block(func, "loop");
                 let end = llvm.add_block(func, "end");
 
+                llvm.br(cond_block);
                 llvm.pos_builder_at_end(cond_block);
                 let cond = compile_expr(while_.cond, llvm)?;
                 let tmp;
@@ -484,10 +503,6 @@ pub fn compile_stmt(stmt: Stmt, llvm: &mut LLVM) -> IRResult<()> {
                     tmp = llvm.build_fcmp("!=", cond, llvm.zero());
                 }
 
-                // Generate condition block
-                // Add a new branch
-
-                llvm.br(cond_block);
                 let result = llvm.condbr(tmp, loop_, end);
 
                 llvm.break_block = Some(end);
@@ -534,9 +549,6 @@ pub fn compile_stmt(stmt: Stmt, llvm: &mut LLVM) -> IRResult<()> {
                 } else {
                     tmp = llvm.build_fcmp("!=", cond, llvm.zero());
                 }
-
-                // Generate condition block
-                // Add a new branch
 
                 let result = llvm.condbr(tmp, loop_, end);
 
@@ -601,6 +613,7 @@ pub fn compile_decl(decl: Decl, llvm: &mut LLVM) -> IRResult<()> {
                     llvm.build_store(value, var);
                 }
                 Ok(())
+
             },
             Decl::FuncDef(funcdef) => {
                 let name = &funcdef.name;
@@ -625,7 +638,7 @@ pub fn compile_decl(decl: Decl, llvm: &mut LLVM) -> IRResult<()> {
                     llvm.pos_builder_at_end(block);
                     for (i, a) in funcdef.param.iter().enumerate() {
                         let arg = llvm.get_param(func, i as u32);
-                        let ptr = llvm.alloca(arg_types[i]);
+                        let ptr = llvm.alloca(arg_types[i], &a.name);
                         llvm.build_store(arg, ptr);
                         llvm.set_var(&a.name, ptr);
                     }
@@ -787,6 +800,22 @@ mod tests {
         int main() {\n\
             char *a;\n\
             int i;\n\
+            a[1] = 1;
+            return 0;
+        }")).unwrap();
+        let mut llvm = LLVM::new();
+        compile_program(program, &mut llvm).expect("shouldn't fail");
+        let result = llvm.print_to_string();
+        println!("{}", result);
+        assert_eq!(result, "fe")
+    }
+
+    #[test]
+    fn test_array_brk() {
+        let program = parse(Lexer::new("
+        int nice(char *a) { a[1] = 1; return 0; }
+        int main() {\n\
+            char a[10];\n\
             a[1] = 1;
             return 0;
         }")).unwrap();

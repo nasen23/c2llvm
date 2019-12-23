@@ -9,4 +9,4 @@ edition = "2018"
 [dependencies]
 llvm-sys = "90.0.0"
 cparser = { path = "../cparser" }
-failure = "0.1.6"
+failure = { version = "0.1.6", feature = ["backtrace"] }
