@@ -23,6 +23,16 @@ pub struct BuildError {
     pub err: BuildErrorKind
 }
 
+impl BuildError {
+    pub fn to_string(&self) -> String {
+        let loc = self.loc.lo.to_string() + ":" + &self.loc.hi.to_string();
+
+        let string = self.file.clone() + ":" + &loc + " error: " + &self.err.to_string();
+
+        string
+    }
+}
+
 #[derive(Debug, Fail)]
 pub enum BuildErrorKind {
     // This error is thrown if a function is declared with a different
@@ -53,6 +63,10 @@ pub enum BuildErrorKind {
 }
 
 impl Compiler {
+    pub fn new(file: &str) -> Self {
+        Compiler { file: file.to_owned(), llvm: LLVM::new() }
+    }
+
     pub fn try_compile_code(&mut self, code: &str) -> Result<(), BuildError> {
         let lexer = Lexer::new(code);
         let program = parser::parse(lexer).map_err(|err| {
@@ -67,6 +81,14 @@ impl Compiler {
         })?;
 
         self.compile_program(program)
+    }
+
+    pub fn print_to_string(&self) -> String {
+        self.llvm.print_to_string()
+    }
+
+    pub fn print_to_file(&self, name: &str) {
+        self.llvm.print_to_file(name);
     }
 
     fn compile_expr(&mut self, expr: Expr) -> IRResult<LLVMValueRef> {
