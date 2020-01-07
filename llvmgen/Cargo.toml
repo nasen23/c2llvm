@@ -7,6 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-inkwell = { git = "https://gitee.com/nasen23/inkwell", branch = "llvm8-0" }
+llvm-sys = "90.0.0"
 cparser = { path = "../cparser" }
-failure = "0.1.6"
+failure = { version = "0.1.6", feature = ["backtrace"] }

@@ -22,6 +22,7 @@ pub struct FuncDef {
     pub ret: Ty,
     pub param: Vec<VarDef>,
     pub block: Option<Block>,
+    pub var_arg: bool
 }
 
 pub struct Block {
@@ -108,10 +109,10 @@ pub struct DoWhile {
 
 pub struct For_ {
     // on early version of C, 'for (int i = 0;;)' is not supported
-    pub init: Box<Stmt>,
+    pub init: Option<Expr>,
     pub cond: Expr,
-    pub update: Box<Stmt>,
-    pub body: Block,
+    pub update: Option<Expr>,
+    pub body: Option<Block>,
 }
 
 impl Display for Program {
@@ -119,7 +120,7 @@ impl Display for Program {
         let decls = &self.decl;
 
         for decl in decls.iter() {
-            write!(f, "{}\n", decl);
+            write!(f, "{}\n", decl)?;
         }
 
         write!(f, "")
@@ -169,6 +170,7 @@ impl Display for FuncDef {
         for (count, item) in self.param.iter().enumerate() {
             if count == 0 {
                 write!(f, "{}", item)?;
+                continue;
             }
             write!(f, ",{}", item)?;
         }
@@ -211,7 +213,7 @@ impl Display for Stmt {
                 }
             ),
             While(ref w) => write!(f, "while {} {}", w.cond, w.body),
-            For(ref f_) => write!(f, "for {};{};{} {}", f_.init, f_.cond, f_.update, f_.body),
+            For(ref f_) => write!(f, "for"),
             Break => write!(f, "break"),
             Continue => write!(f, "continue"),
             _ => Ok(()),
