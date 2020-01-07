@@ -166,11 +166,11 @@ lexer! {
 
 fn parse_str(tok: &str) -> String {
     tok.replace("\\n", "\n")
-       .replace("\\r", "\r")
-       .replace("\\t", "\t")
-       .replace("\\\\", "\\")
-       .replace("\\'", "'")
-       .replace("\\\"", "\"")
+        .replace("\\r", "\r")
+        .replace("\\t", "\t")
+        .replace("\\\\", "\\")
+        .replace("\\'", "'")
+        .replace("\\\"", "\"")
 }
 
 // parse &str into char
@@ -188,9 +188,7 @@ fn parse_char(tok: &str) -> char {
         r"\'" => '\'',
         r#"\""# => '\'',
         s if s.len() == 1 => s.chars().next().unwrap(),
-        _ => {
-            panic!(format!("Unknown escape character '{}'", tok))
-        }
+        _ => panic!(format!("Unknown escape character '{}'", tok)),
     }
 }
 

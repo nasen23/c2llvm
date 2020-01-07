@@ -35,7 +35,7 @@ pub enum UnaOp {
     RInc,
     RDec,
     LInc,
-    LDec
+    LDec,
 }
 
 impl BinOp {
