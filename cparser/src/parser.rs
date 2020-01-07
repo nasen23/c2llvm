@@ -152,9 +152,9 @@ parser! {
 
     ty: ty::Ty {
         sim_ty[ty] => ty,
-        stor[s] ty[ty] => ty.with_stor(s),
-        qual[q] ty[ty] => ty.with_qual(q),
-        sim_ty[ty] Mul => ty::Ty::pointer(ty.kind),
+        stor[s] sim_ty[ty] => ty.with_stor(s),
+        qual[q] sim_ty[ty] => ty.with_qual(q),
+        ty[ty] Mul => ty::Ty::pointer(ty.kind),
     }
 
     stor: ty::StorClass {

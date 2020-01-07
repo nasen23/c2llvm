@@ -48,8 +48,18 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
 
     match expr {
         Id(name) => match llvm.get_var(&name) {
-            Some(var) => Ok(llvm.build_load(*var, &format!("load_{}", name))),
-            None => Err(BuildError::UnknownIdent { name }),
+            Some(var) => Ok(if llvm.is_array(unsafe { LLVMGetElementType(LLVMTypeOf(*var)) }) {
+                let zero = llvm.zero();
+                llvm.build_gep(*var, &mut [zero, zero])
+            } else {
+                llvm.build_load(*var, "load")
+            }),
+            None => {
+                match llvm.get_global(&name) {
+                    Some(var) => Ok(llvm.build_load(*var, &format!("load_{}", name))),
+                    None => Err(BuildError::UnknownIdent { name })
+                }
+            },
         },
         IntLit(int) => unsafe {
             Ok(LLVMConstInt(LLVMInt32Type(), int as u64, 0))
@@ -387,7 +397,6 @@ pub fn compile_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
             let rhs = compile_expr(*assign.src, llvm)?;
             let element_type = LLVMGetElementType(LLVMTypeOf(lhs));
             let rhs = llvm.cast_into(rhs, element_type).ok_or(BuildError::TypeCast)?;
-            println!("{} := {}", llvm.value_as_str(lhs), llvm.value_as_str(rhs));
             Ok(llvm.build_store(rhs, lhs))
         }
     }
@@ -399,7 +408,12 @@ pub fn compile_pointer_expr(expr: Expr, llvm: &LLVM) -> IRResult<LLVMValueRef> {
     match expr {
         Id(name) => match llvm.get_var(&name) {
             Some(var) => Ok(*var),
-            None => Err(BuildError::UnknownIdent { name }),
+            None => {
+                match llvm.get_global(&name) {
+                    Some(var) => Ok(*var),
+                    None => Err(BuildError::UnknownIdent { name })
+                }
+            },
         },
         Binary(binary) if binary.op == BinOp::Brks => unsafe {
             let lhs = compile_pointer_expr(*binary.l, llvm)?;
@@ -610,7 +624,8 @@ pub fn compile_decl(decl: Decl, llvm: &mut LLVM) -> IRResult<()> {
                 let var = llvm.add_global(ty, &vardef.name);
                 if let Some(expr) = vardef.value {
                     let value = compile_expr(expr, llvm)?;
-                    llvm.build_store(value, var);
+                    LLVMSetGlobalConstant(value, 0);
+                    // llvm.build_store(value, var);
                 }
                 Ok(())
 
@@ -646,7 +661,7 @@ pub fn compile_decl(decl: Decl, llvm: &mut LLVM) -> IRResult<()> {
                     for stmt in body.stmts {
                         compile_stmt(stmt, llvm)?;
                     }
-                    llvm.clear_arg();
+                    llvm.clear_var();
                 }
 
                 // TODO: check return stmt

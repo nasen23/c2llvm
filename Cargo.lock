@@ -52,6 +52,14 @@ version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "compiler"
+version = "0.1.0"
+dependencies = [
+ "cparser 0.1.0",
+ "llvmgen 0.1.0",
+]
+
+[[package]]
 name = "cparser"
 version = "0.1.0"
 dependencies = [
