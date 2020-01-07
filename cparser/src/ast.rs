@@ -1,3 +1,4 @@
+use crate::lexer::Span;
 use crate::op::*;
 use crate::ty::*;
 use std::fmt::{Display, Formatter, Result};
@@ -22,7 +23,8 @@ pub struct FuncDef {
     pub ret: Ty,
     pub param: Vec<VarDef>,
     pub block: Option<Block>,
-    pub var_arg: bool
+    pub var_arg: bool,
+    pub loc: Span,
 }
 
 pub struct Block {
@@ -32,6 +34,7 @@ pub struct Block {
 pub struct TypeDef {
     pub ty: Ty,
     pub name: String,
+    pub loc: Span,
 }
 
 pub struct VarDef {
@@ -40,6 +43,7 @@ pub struct VarDef {
     // Note that const variables must have an initial value
     // If it is not initialized explicitly, it should have a default value
     pub value: Option<Expr>,
+    pub loc: Span,
 }
 
 // TODO: cond_expr(a ? b : c) inc/dec_expr(++i, i--)
@@ -59,22 +63,26 @@ pub struct Call {
     // should interpret func as varsel
     pub func: Box<Expr>,
     pub arg: Vec<Expr>,
+    pub loc: Span,
 }
 
 pub struct Unary {
     pub op: UnaOp,
     pub r: Box<Expr>,
+    pub loc: Span,
 }
 
 pub struct Binary {
     pub op: BinOp,
     pub l: Box<Expr>,
     pub r: Box<Expr>,
+    pub loc: Span,
 }
 
 pub struct Assignment {
     pub dst: Box<Expr>,
     pub src: Box<Expr>,
+    pub loc: Span,
 }
 
 pub enum Stmt {
@@ -95,16 +103,19 @@ pub struct If_ {
     pub cond: Expr,
     pub on_true: Block,
     pub on_false: Option<Block>,
+    pub loc: Span,
 }
 
 pub struct While_ {
     pub cond: Expr,
     pub body: Block,
+    pub loc: Span,
 }
 
 pub struct DoWhile {
     pub cond: Expr,
     pub body: Block,
+    pub loc: Span,
 }
 
 pub struct For_ {
@@ -113,6 +124,7 @@ pub struct For_ {
     pub cond: Expr,
     pub update: Option<Expr>,
     pub body: Option<Block>,
+    pub loc: Span,
 }
 
 impl Display for Program {
