@@ -1,7 +1,6 @@
 use cparser::lexer::{Lexer, Span};
 use cparser::parser;
 use cparser::ast::*;
-use cparser::ty::*;
 use cparser::op::*;
 
 use failure::Fail;
@@ -19,9 +18,9 @@ pub struct Compiler {
 }
 
 pub struct BuildError {
-    file: String,
-    loc: Span,
-    err: BuildErrorKind
+    pub file: String,
+    pub loc: Span,
+    pub err: BuildErrorKind
 }
 
 #[derive(Debug, Fail)]
@@ -49,17 +48,26 @@ pub enum BuildErrorKind {
     ExprAsFunc,
     #[fail(display = "not inside a function")]
     NotInFunc,
-    #[fail(display = "")]
+    #[fail(display = "{}", detail)]
     Syntax { detail: String },
 }
 
 impl Compiler {
-    // pub fn compile_code(&mut self, code: &str) {
-    //     let lexer = Lexer::new(code);
-    //     let program = parser::parse(lexer).map_err(|err| {
-    //         self.mk_err(, err: BuildErrorKind)
-    //     });
-    // }
+    pub fn try_compile_code(&mut self, code: &str) -> Result<(), BuildError> {
+        let lexer = Lexer::new(code);
+        let program = parser::parse(lexer).map_err(|err| {
+            let loc = if let Some(next) = err.0 {
+                next.1
+            } else {
+                Span { hi: 0, lo: 0 }
+            };
+
+            let detail = err.1.to_owned();
+            self.mk_err(loc, BuildErrorKind::Syntax { detail })
+        })?;
+
+        self.compile_program(program)
+    }
 
     fn compile_expr(&mut self, expr: Expr) -> IRResult<LLVMValueRef> {
         use Expr::*;
