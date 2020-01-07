@@ -238,11 +238,11 @@ impl Expr {
         use Expr::*;
 
         match self {
-            Id(_, loc) => *loc,
-            IntLit(_, loc) => *loc,
-            FloatLit(_, loc) => *loc,
-            CharLit(_, loc) => *loc,
-            StringLit(_, loc) => *loc,
+            Id(_, loc) => loc.clone(),
+            IntLit(_, loc) => loc.clone(),
+            FloatLit(_, loc) => loc.clone(),
+            CharLit(_, loc) => loc.clone(),
+            StringLit(_, loc) => loc.clone(),
             Call(call) => call.loc,
             Unary(unary) => unary.loc,
             Binary(binary) => binary.loc,
