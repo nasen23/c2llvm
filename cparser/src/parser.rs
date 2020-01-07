@@ -233,11 +233,11 @@ parser! {
     }
 
     prim_expr: Expr {
-        Id(name) => Expr::Id(name),
-        IntLit(i) => Expr::IntLit(i),
-        CharLit(i) => Expr::CharLit(i),
-        DoubleLit(i) => Expr::FloatLit(i),
-        StringLit(i) => Expr::StringLit(i),
+        Id(name) => Expr::Id(name, span!()),
+        IntLit(i) => Expr::IntLit(i, span!()),
+        CharLit(i) => Expr::CharLit(i, span!()),
+        DoubleLit(i) => Expr::FloatLit(i, span!()),
+        StringLit(i) => Expr::StringLit(i, span!()),
         LPar expr[e] RPar => e,
     }
 
@@ -248,8 +248,8 @@ parser! {
         post_expr[l] LPar arg_expr_list[r] RPar => Expr::Call(Call {
             func: Box::new(l), arg: r, loc: span!()
         }),
-        post_expr[l] Dot Id(r) => mk_bin(l, Expr::Id(r), BinOp::Dot, span!()),
-        post_expr[l] Arrow Id(r) => mk_bin(l, Expr::Id(r), BinOp::Arrow, span!()),
+        post_expr[l] Dot Id(r) => mk_bin(l, Expr::Id(r, span!()), BinOp::Dot, span!()),
+        post_expr[l] Arrow Id(r) => mk_bin(l, Expr::Id(r, span!()), BinOp::Arrow, span!()),
         post_expr[l] Inc => mk_una(l, UnaOp::RInc, span!()),
         post_expr[l] Dec => mk_una(l, UnaOp::RDec, span!())
     }

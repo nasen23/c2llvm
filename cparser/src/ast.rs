@@ -48,11 +48,11 @@ pub struct VarDef {
 
 // TODO: cond_expr(a ? b : c) inc/dec_expr(++i, i--)
 pub enum Expr {
-    Id(String),
-    IntLit(i32),
-    FloatLit(f64),
-    CharLit(char),
-    StringLit(String),
+    Id(String, Span),
+    IntLit(i32, Span),
+    FloatLit(f64, Span),
+    CharLit(char, Span),
+    StringLit(String, Span),
     Call(Call),
     Unary(Unary),
     Binary(Binary),
@@ -233,16 +233,34 @@ impl Display for Stmt {
     }
 }
 
+impl Expr {
+    pub fn loc(&self) -> Span {
+        use Expr::*;
+
+        match self {
+            Id(_, loc) => *loc,
+            IntLit(_, loc) => *loc,
+            FloatLit(_, loc) => *loc,
+            CharLit(_, loc) => *loc,
+            StringLit(_, loc) => *loc,
+            Call(call) => call.loc,
+            Unary(unary) => unary.loc,
+            Binary(binary) => binary.loc,
+            Assign(assign) => assign.loc,
+        }
+    }
+}
+
 impl Display for Expr {
     fn fmt(&self, f: &mut Formatter) -> Result {
         use Expr::*;
 
         match self {
-            Id(ref v) => write!(f, "{}", v),
-            IntLit(ref i) => write!(f, "{}", i),
-            FloatLit(ref f_) => write!(f, "{}", f_),
-            CharLit(ref c) => write!(f, "{}", c),
-            StringLit(ref s) => write!(f, "{}", s),
+            Id(ref v, _) => write!(f, "{}", v),
+            IntLit(ref i, _) => write!(f, "{}", i),
+            FloatLit(ref f_, _) => write!(f, "{}", f_),
+            CharLit(ref c, _) => write!(f, "{}", c),
+            StringLit(ref s, _) => write!(f, "{}", s),
             Call(ref c) => write!(f, "{}", c.func),
             Unary(ref u) => write!(f, "uop {}", u.r),
             Binary(ref b) => write!(f, "{} bop {}", b.l, b.r),
