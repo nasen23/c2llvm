@@ -1,7 +1,7 @@
 use crate::ast::*;
+use crate::lexer::Lexer;
 use crate::lexer::{Span, Token, Token::*};
 use crate::op::*;
-use crate::lexer::Lexer;
 use crate::ty;
 use plex::parser;
 
@@ -38,7 +38,7 @@ parser! {
 
     typedef: TypeDef {
         Typedef ty[ty] Id(name) => TypeDef {
-            ty, name
+            ty, name, loc: span!()
         }
     }
 
@@ -46,12 +46,12 @@ parser! {
         // Function definition:
         // int some(int a, int b) { ... };
         ty[ty] Id(name) LPar parameter_list_or_empty[defs] RPar block[block] => FuncDef {
-            name, ret: ty, param: defs.0, block: Some(block), var_arg: defs.1
+            name, ret: ty, param: defs.0, block: Some(block), var_arg: defs.1, loc: span!()
         },
         // Function declaration:
         // int some(int);
         ty[ty] Id(name) LPar parameter_list_or_empty[defs] RPar Semi => FuncDef {
-            name, ret: ty, param: defs.0, block: None, var_arg: defs.1
+            name, ret: ty, param: defs.0, block: None, var_arg: defs.1, loc: span!()
         }
     }
 
@@ -112,7 +112,7 @@ parser! {
     }
 
     parameter: VarDef {
-        ty[ty] Id(s) => VarDef { ty, name: s, value: None }
+        ty[ty] Id(s) => VarDef { ty, name: s, value: None, loc: span!() }
     }
 
     vardefs: Vec<VarDef> {
@@ -125,18 +125,19 @@ parser! {
 
     vardef: VarDef {
         ty[ty] Id(name) => VarDef { // int a
-            name, ty, value: None
+            name, ty, value: None, loc: span!()
         },
         // function definition does not allow something like (int a = 1, int b)
         // int a = 1 + 2
         ty[ty] Id(name) Assign expr[e] => VarDef {
-            name, ty, value: Some(e)
+            name, ty, value: Some(e), loc: span!()
         },
         // int a[1];
         ty[ty] Id(name) LBrk IntLit(len) RBrk => VarDef {
             name,
             ty: ty::Ty::array(ty.kind, Some(len as u32)),
-            value: None
+            value: None,
+            loc: span!(),
         },
     }
 
@@ -190,7 +191,7 @@ parser! {
     if_: Stmt {
         // if (cond) on_true else on_false
         If LPar expr[cond] RPar block[on_true] else_[on_false] =>
-            Stmt::If(If_ { cond, on_true, on_false })
+            Stmt::If(If_ { cond, on_true, on_false, loc: span!() })
     }
 
     else_: Option<Block> {
@@ -201,15 +202,15 @@ parser! {
     while_: Stmt {
         // while (cond) body
         While LPar expr[cond] RPar block[body] =>
-            Stmt::While(While_ { cond, body })
+            Stmt::While(While_ { cond, body, loc: span!() })
     }
 
     for_: Stmt {
         // for (init;cond;update) body
         For LPar expr[init] Semi expr[cond] Semi expr[update] RPar block[body] =>
-            Stmt::For(For_ { init: Some(init), cond: cond, update: Some(update), body: Some(body) }),
+            Stmt::For(For_ { init: Some(init), cond: cond, update: Some(update), body: Some(body), loc: span!() }),
         For LPar expr[init] Semi expr[cond] Semi expr[update] RPar Semi =>
-            Stmt::For(For_ { init: Some(init), cond: cond, update: Some(update), body: None })
+            Stmt::For(For_ { init: Some(init), cond: cond, update: Some(update), body: None, loc: span!() })
     }
 
     return_: Stmt {
@@ -232,25 +233,25 @@ parser! {
     }
 
     prim_expr: Expr {
-        Id(name) => Expr::Id(name),
-        IntLit(i) => Expr::IntLit(i),
-        CharLit(i) => Expr::CharLit(i),
-        DoubleLit(i) => Expr::FloatLit(i),
-        StringLit(i) => Expr::StringLit(i),
+        Id(name) => Expr::Id(name, span!()),
+        IntLit(i) => Expr::IntLit(i, span!()),
+        CharLit(i) => Expr::CharLit(i, span!()),
+        DoubleLit(i) => Expr::FloatLit(i, span!()),
+        StringLit(i) => Expr::StringLit(i, span!()),
         LPar expr[e] RPar => e,
     }
 
     post_expr: Expr {
         prim_expr[e] => e,
-        post_expr[l] LBrk expr[r] RBrk => mk_bin(l, r, BinOp::Brks),
-        post_expr[l] LPar RPar => Expr::Call(Call { func: Box::new(l), arg: vec![] }),
+        post_expr[l] LBrk expr[r] RBrk => mk_bin(l, r, BinOp::Brks, span!()),
+        post_expr[l] LPar RPar => Expr::Call(Call { func: Box::new(l), arg: vec![], loc: span!() }),
         post_expr[l] LPar arg_expr_list[r] RPar => Expr::Call(Call {
-            func: Box::new(l), arg: r
+            func: Box::new(l), arg: r, loc: span!()
         }),
-        post_expr[l] Dot Id(r) => mk_bin(l, Expr::Id(r), BinOp::Dot),
-        post_expr[l] Arrow Id(r) => mk_bin(l, Expr::Id(r), BinOp::Arrow),
-        post_expr[l] Inc => mk_una(l, UnaOp::RInc),
-        post_expr[l] Dec => mk_una(l, UnaOp::RDec)
+        post_expr[l] Dot Id(r) => mk_bin(l, Expr::Id(r, span!()), BinOp::Dot, span!()),
+        post_expr[l] Arrow Id(r) => mk_bin(l, Expr::Id(r, span!()), BinOp::Arrow, span!()),
+        post_expr[l] Inc => mk_una(l, UnaOp::RInc, span!()),
+        post_expr[l] Dec => mk_una(l, UnaOp::RDec, span!())
     }
 
     arg_expr_list: Vec<Expr> {
@@ -264,19 +265,19 @@ parser! {
     unary_expr: Expr {
         post_expr[e] => e,
         // TODO: ++ and --
-        Inc unary_expr[e] => mk_una(e, UnaOp::LInc),
-        Dec unary_expr[e] => mk_una(e, UnaOp::LDec),
-        unary_op[op] cast_expr[r] => mk_una(r, op),
-        Sizeof unary_expr[r] => mk_una(r, UnaOp::Sizeof),
+        Inc unary_expr[e] => mk_una(e, UnaOp::LInc, span!()),
+        Dec unary_expr[e] => mk_una(e, UnaOp::LDec, span!()),
+        unary_op[op] cast_expr[r] => mk_una(r, op.0, op.1),
+        Sizeof unary_expr[r] => mk_una(r, UnaOp::Sizeof, span!()),
         // TODO: sizeof(type)
     }
 
-    unary_op: UnaOp {
-        Sub => UnaOp::Neg,
-        Not => UnaOp::Not,
-        BitRev => UnaOp::BitRev,
-        BitAnd => UnaOp::Addr,
-        Mul => UnaOp::Deref,
+    unary_op: (UnaOp, Span) {
+        Sub => (UnaOp::Neg, span!()),
+        Not => (UnaOp::Not, span!()),
+        BitRev => (UnaOp::BitRev, span!()),
+        BitAnd => (UnaOp::Addr, span!()),
+        Mul => (UnaOp::Deref, span!()),
     }
 
     cast_expr: Expr {
@@ -286,60 +287,60 @@ parser! {
 
     mul_expr: Expr {
         cast_expr[e] => e,
-        mul_expr[l] Mul cast_expr[r] => mk_bin(l, r, BinOp::Mul),
-        mul_expr[l] Div cast_expr[r] => mk_bin(l, r, BinOp::Div),
-        mul_expr[l] Mod cast_expr[r] => mk_bin(l, r, BinOp::Mod),
+        mul_expr[l] Mul cast_expr[r] => mk_bin(l, r, BinOp::Mul, span!()),
+        mul_expr[l] Div cast_expr[r] => mk_bin(l, r, BinOp::Div, span!()),
+        mul_expr[l] Mod cast_expr[r] => mk_bin(l, r, BinOp::Mod, span!()),
     }
 
     add_expr: Expr {
         mul_expr[e] => e,
-        add_expr[l] Add mul_expr[r] => mk_bin(l, r, BinOp::Add),
-        add_expr[l] Sub mul_expr[r] => mk_bin(l, r, BinOp::Sub),
+        add_expr[l] Add mul_expr[r] => mk_bin(l, r, BinOp::Add, span!()),
+        add_expr[l] Sub mul_expr[r] => mk_bin(l, r, BinOp::Sub, span!()),
     }
 
     sft_expr: Expr {
         add_expr[e] => e,
-        sft_expr[l] BitLSft add_expr[r] => mk_bin(l, r, BinOp::BitLSft),
-        sft_expr[l] BitRSft add_expr[r] => mk_bin(l, r, BinOp::BitRSft),
+        sft_expr[l] BitLSft add_expr[r] => mk_bin(l, r, BinOp::BitLSft, span!()),
+        sft_expr[l] BitRSft add_expr[r] => mk_bin(l, r, BinOp::BitRSft, span!()),
     }
 
     rela_expr: Expr {
         sft_expr[e] => e,
-        rela_expr[l] Lt sft_expr[r] => mk_bin(l, r, BinOp::Lt),
-        rela_expr[l] Gt sft_expr[r] => mk_bin(l, r, BinOp::Gt),
-        rela_expr[l] Le sft_expr[r] => mk_bin(l, r, BinOp::Le),
-        rela_expr[l] Ge sft_expr[r] => mk_bin(l, r, BinOp::Ge),
+        rela_expr[l] Lt sft_expr[r] => mk_bin(l, r, BinOp::Lt, span!()),
+        rela_expr[l] Gt sft_expr[r] => mk_bin(l, r, BinOp::Gt, span!()),
+        rela_expr[l] Le sft_expr[r] => mk_bin(l, r, BinOp::Le, span!()),
+        rela_expr[l] Ge sft_expr[r] => mk_bin(l, r, BinOp::Ge, span!()),
     }
 
     equ_expr: Expr {
         rela_expr[e] => e,
-        equ_expr[l] Eq rela_expr[r] => mk_bin(l, r, BinOp::Eq),
-        equ_expr[l] Ne rela_expr[r] => mk_bin(l, r, BinOp::Ne),
+        equ_expr[l] Eq rela_expr[r] => mk_bin(l, r, BinOp::Eq, span!()),
+        equ_expr[l] Ne rela_expr[r] => mk_bin(l, r, BinOp::Ne, span!()),
     }
 
     bitand_expr: Expr {
         equ_expr[e] => e,
-        bitand_expr[l] BitAnd equ_expr[r] => mk_bin(l, r, BinOp::BitAnd),
+        bitand_expr[l] BitAnd equ_expr[r] => mk_bin(l, r, BinOp::BitAnd, span!()),
     }
 
     xor_expr: Expr {
         bitand_expr[e] => e,
-        xor_expr[l] BitXor bitand_expr[r] => mk_bin(l, r, BinOp::BitXor),
+        xor_expr[l] BitXor bitand_expr[r] => mk_bin(l, r, BinOp::BitXor, span!()),
     }
 
     bitor_expr: Expr {
         xor_expr[e] => e,
-        bitor_expr[l] BitOr xor_expr[r] => mk_bin(l, r, BinOp::BitOr),
+        bitor_expr[l] BitOr xor_expr[r] => mk_bin(l, r, BinOp::BitOr, span!()),
     }
 
     and_expr: Expr {
         bitor_expr[e] => e,
-        and_expr[l] And bitor_expr[r] => mk_bin(l, r, BinOp::And),
+        and_expr[l] And bitor_expr[r] => mk_bin(l, r, BinOp::And, span!()),
     }
 
     or_expr: Expr {
         and_expr[e] => e,
-        or_expr[l] Or and_expr[r] => mk_bin(l, r, BinOp::Or),
+        or_expr[l] Or and_expr[r] => mk_bin(l, r, BinOp::Or, span!()),
     }
 
     cond_expr: Expr {
@@ -350,14 +351,14 @@ parser! {
     assign_expr: Expr {
         cond_expr[e] => e,
         unary_expr[dst] Assign assign_expr[src] => Expr::Assign(Assignment {
-            dst: Box::new(dst), src: Box::new(src)
+            dst: Box::new(dst), src: Box::new(src), loc: span!()
         }),
         // TODO: += -= *= ...
     }
 
     expr: Expr {
         assign_expr[e] => e,
-        expr[l] Comma assign_expr[r] => mk_bin(l, r, BinOp::Comma)
+        expr[l] Comma assign_expr[r] => mk_bin(l, r, BinOp::Comma, span!())
     }
 
     const_expr: Expr {
@@ -366,16 +367,21 @@ parser! {
 
 }
 
-fn mk_bin(l: Expr, r: Expr, op: BinOp) -> Expr {
+fn mk_bin(l: Expr, r: Expr, op: BinOp, loc: Span) -> Expr {
     Expr::Binary(Binary {
         op,
         l: Box::new(l),
         r: Box::new(r),
+        loc,
     })
 }
 
-fn mk_una(r: Expr, op: UnaOp) -> Expr {
-    Expr::Unary(Unary { op, r: Box::new(r) })
+fn mk_una(r: Expr, op: UnaOp, loc: Span) -> Expr {
+    Expr::Unary(Unary {
+        op,
+        r: Box::new(r),
+        loc,
+    })
 }
 
 pub fn parse(lexer: Lexer) -> Result<Program, (Option<(Token, Span)>, &'static str)> {
@@ -397,15 +403,15 @@ mod tests {
     fn simple_main_function() {
         let program = parse_(Lexer::new(
             "int main() {\n\
-                 int a = 1;\n\
-                 int b = a + 2;\n\
+             int a = 1;\n\
+             int b = a + 2;\n\
              }",
         ))
         .unwrap();
         assert_eq!(
             "defun main() -> int {\n\
-                 defvar a: int = 1\n\
-                 defvar b: int = a bop 2\n\
+             defvar a: int = 1\n\
+             defvar b: int = a bop 2\n\
              }\n",
             program.to_string()
         );
@@ -439,15 +445,15 @@ mod tests {
     fn test_funcdef_body() {
         let program = parse_(Lexer::new(
             "double sum() {\n\
-                 double a = 1.0;\n\
-                 double b = 2.0;\n\
+             double a = 1.0;\n\
+             double b = 2.0;\n\
              }",
         ))
         .unwrap();
         assert_eq!(
             "defun sum() -> double {\n\
-                 defvar a: double = 1\n\
-                 defvar b: double = 2\n\
+             defvar a: double = 1\n\
+             defvar b: double = 2\n\
              }\n",
             program.to_string()
         );
@@ -465,21 +471,14 @@ mod tests {
 
     #[test]
     fn test_funcdecl() {
-        let program = parse_(Lexer::new(
-            "float some();"
-        )).unwrap();
-        assert_eq!(
-            "defun some() -> float\n",
-            program.to_string()
-        );
+        let program = parse_(Lexer::new("float some();")).unwrap();
+        assert_eq!("defun some() -> float\n", program.to_string());
     }
 
     // FIXME: redundant defvar: a -> int
     #[test]
     fn test_funcdecl_args() {
-        let program = parse_(Lexer::new(
-            "float some(int a, double c);"
-        )).unwrap();
+        let program = parse_(Lexer::new("float some(int a, double c);")).unwrap();
         assert_eq!(
             "defun some(defvar a: int,defvar c: double) -> float\n",
             program.to_string()
@@ -491,10 +490,11 @@ mod tests {
     fn test_structdef() {
         let program = parse_(Lexer::new(
             "struct test{\n\
-                 int a;\n\
-                 double b;\n\
-             };"
-        )).unwrap();
+             int a;\n\
+             double b;\n\
+             };",
+        ))
+        .unwrap();
         assert_eq!(
             "defstruct test:{\n\
                  defvar a: int\n\
